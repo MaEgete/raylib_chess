@@ -50,8 +50,8 @@ private:
         {9 ,11,10,8 ,7 ,10,11,9},
         {12 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
         {0 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
-        {0 ,12 ,0 ,3 ,0 ,12 ,12 ,12},
-        {6 ,0 ,0 ,3 ,0 ,0 ,0 ,6},
+        {0 ,12 ,0 ,3 ,0 ,0 ,12 ,12},
+        {6 ,0 ,0 ,3 ,0 ,12 ,0 ,6},
         {0 ,0 ,6 ,0 ,0 ,0 ,0 ,0},
         {0 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
         {6 ,5 ,4 ,2 ,1 ,4 ,5 ,3},
@@ -425,9 +425,15 @@ public:
                         }
                     }
                     if (x > 0 && static_cast<Players>(gMap[y+1][x-1]) != Players::EMPTY) {
+                        if (static_cast<Players>(gMap[y+1][x-1]) >= Players::B_KING){
+                            break;
+                        }
                         possibleMoves.emplace_back(x-1, y+1);
                     }
                     if (x < 7 && static_cast<Players>(gMap[y+1][x+1]) != Players::EMPTY) {
+                        if (static_cast<Players>(gMap[y+1][x+1]) >= Players::B_KING){
+                            break;
+                        }
                         possibleMoves.emplace_back(x+1, y+1);
                     }
                 }
