@@ -47,11 +47,11 @@ private:
     std::vector<Rectangle> pieceSprites{static_cast<int>(PieceSprite::COUNT)};
 
     int gMap[8][8] = {
-        {9 ,11,10,8 ,7 ,10,11,9},
+        {9 ,11,10,8 ,7 ,10,11,0},
         {12 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
         {0 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
-        {0 ,12 ,0 ,3 ,0 ,0 ,12 ,12},
-        {6 ,0 ,0 ,3 ,0 ,12 ,0 ,6},
+        {0 ,12 ,0 ,9 ,0 ,0 ,12 ,12},
+        {6 ,0 ,0 ,9 ,0 ,12 ,0 ,6},
         {0 ,0 ,6 ,0 ,0 ,0 ,0 ,0},
         {0 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
         {6 ,5 ,4 ,2 ,1 ,4 ,5 ,3},
@@ -64,7 +64,9 @@ private:
     // Alle moeglichen Zuege markieren
     std::vector<std::pair<int, int>> possibleMoves;
 
-
+    // true == weiss ist am Zug
+    // false == schwarz ist am Zug
+    bool turn = true;
 
 
 public:
@@ -102,11 +104,16 @@ public:
         drawField();
         drawClickedField();
         drawFigures();
+        drawText();
     }
 
     // Regeln
     void update() {
         moveFigure();
+    }
+
+    void drawText() {
+        DrawText(TextFormat("%s to move", (this->turn ? "White" : "Black"), 20), 10, 10, 20, WHITE);
     }
 
     // Spielfeld zeichnen
@@ -383,6 +390,67 @@ public:
             }
             case Players::B_ROOK: {
                 std::cout << "B Rook" << std::endl;
+
+                // While-Schleife um zu ueberpruefen, wie viele Felder frei sind
+                // Richtung nach oben
+                int nx = x, ny = y;
+                while (ny > 0){
+                    nx = x;
+                    ny -= 1;
+                    if (static_cast<Players>(gMap[ny][nx]) >= Players::B_KING){
+                        break;
+                    }
+                    possibleMoves.emplace_back(nx, ny);
+                    if (static_cast<Players>(gMap[ny][nx]) >= Players::W_KING && static_cast<Players>(gMap[ny][nx]) < Players::B_KING) {
+                        break;
+                    }
+                }
+
+                // Richtung nach unten
+                nx = x;
+                ny = y;
+                while (ny < 7){
+                    nx = x;
+                    ny += 1;
+                    if (static_cast<Players>(gMap[ny][nx]) >= Players::B_KING){
+                        break;
+                    }
+                    possibleMoves.emplace_back(nx, ny);
+                    if (static_cast<Players>(gMap[ny][nx]) >= Players::W_KING && static_cast<Players>(gMap[ny][nx]) < Players::B_KING) {
+                        break;
+                    }
+                }
+
+                // Richtung nach links
+                nx = x;
+                ny = y;
+                while (nx > 0){
+                    nx -= 1;
+                    ny = y;
+                    if (static_cast<Players>(gMap[ny][nx]) >= Players::B_KING){
+                        break;
+                    }
+                    possibleMoves.emplace_back(nx, ny);
+                    if (static_cast<Players>(gMap[ny][nx]) >= Players::W_KING && static_cast<Players>(gMap[ny][nx]) < Players::B_KING) {
+                        break;
+                    }
+                }
+
+                // Richtung nach rechts
+                nx = x;
+                ny = y;
+                while (nx > 0){
+                    nx += 1;
+                    ny = y;
+                    if (static_cast<Players>(gMap[ny][nx]) >= Players::B_KING){
+                        break;
+                    }
+                    possibleMoves.emplace_back(nx, ny);
+                    if (static_cast<Players>(gMap[ny][nx]) >= Players::W_KING && static_cast<Players>(gMap[ny][nx]) < Players::B_KING) {
+                        break;
+                    }
+                }
+
                 break;
             }
             case Players::W_PAWN: {
