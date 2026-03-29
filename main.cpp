@@ -156,6 +156,12 @@ public:
         }
     }
 
+    void drawFiguresHelpMethod(PieceSprite pieceSprite, int nx, int ny, float scale) const {
+        Rectangle src = pieceSprites[static_cast<int>(pieceSprite)];
+        auto dst = Rectangle{static_cast<float>(nx), static_cast<float>(ny), src.width * scale, src.height * scale};
+        DrawTexturePro(pieceSpritesheet, src, dst, Vector2{0.0f, 0.0f}, 0.0f, WHITE);
+    }
+
     void drawFigures() {
 
         float scale = 2.5f;
@@ -173,76 +179,52 @@ public:
                         break;
 
                     case Players::W_KING: {
-                        Rectangle src = pieceSprites[static_cast<int>(PieceSprite::W_KING)];
-                        auto dst = Rectangle{static_cast<float>(nx), static_cast<float>(ny), src.width * scale, src.height * scale};
-                        DrawTexturePro(pieceSpritesheet, src, dst, Vector2{0.0f, 0.0f}, 0.0f, WHITE);
+                        drawFiguresHelpMethod(PieceSprite::W_KING, nx, ny, scale);
                         break;
                     }
                     case Players::W_QUEEN: {
-                        Rectangle src = pieceSprites[static_cast<int>(PieceSprite::W_QUEEN)];
-                        auto dst = Rectangle{static_cast<float>(nx), static_cast<float>(ny), src.width * scale, src.height * scale};
-                        DrawTexturePro(pieceSpritesheet, src, dst, Vector2{0.0f, 0.0f}, 0.0f, WHITE);
+                        drawFiguresHelpMethod(PieceSprite::W_QUEEN, nx, ny, scale);
                         break;
                     }
                     case Players::W_ROOK: {
-                        Rectangle src = pieceSprites[static_cast<int>(PieceSprite::W_ROOK)];
-                        auto dst = Rectangle{static_cast<float>(nx), static_cast<float>(ny), src.width * scale, src.height * scale};
-                        DrawTexturePro(pieceSpritesheet, src, dst, Vector2{0.0f, 0.0f}, 0.0f, WHITE);
+                        drawFiguresHelpMethod(PieceSprite::W_ROOK, nx, ny, scale);
                         break;
                     }
                     case Players::W_BISHOP: {
-                        Rectangle src = pieceSprites[static_cast<int>(PieceSprite::W_BISHOP)];
-                        auto dst = Rectangle{static_cast<float>(nx), static_cast<float>(ny), src.width * scale, src.height * scale};
-                        DrawTexturePro(pieceSpritesheet, src, dst, Vector2{0.0f, 0.0f}, 0.0f, WHITE);
+                        drawFiguresHelpMethod(PieceSprite::W_BISHOP, nx, ny, scale);
                         break;
                     }
                     case Players::W_KNIGHT: {
-                        Rectangle src = pieceSprites[static_cast<int>(PieceSprite::W_KNIGHT)];
-                        auto dst = Rectangle{static_cast<float>(nx), static_cast<float>(ny), src.width * scale, src.height * scale};
-                        DrawTexturePro(pieceSpritesheet, src, dst, Vector2{0.0f, 0.0f}, 0.0f, WHITE);
+                        drawFiguresHelpMethod(PieceSprite::W_KNIGHT, nx, ny, scale);
                         break;
                     }
                     case Players::W_PAWN: {
-                        Rectangle src = pieceSprites[static_cast<int>(PieceSprite::W_PAWN)];
-                        auto dst = Rectangle{static_cast<float>(nx), static_cast<float>(ny), src.width * scale, src.height * scale};
-                        DrawTexturePro(pieceSpritesheet, src, dst, Vector2{0.0f, 0.0f}, 0.0f, WHITE);
+                        drawFiguresHelpMethod(PieceSprite::W_PAWN, nx, ny, scale);
                         break;
                     }
 
                     case Players::B_KING: {
-                        Rectangle src = pieceSprites[static_cast<int>(PieceSprite::B_KING)];
-                        auto dst = Rectangle{static_cast<float>(nx), static_cast<float>(ny), src.width * scale, src.height * scale};
-                        DrawTexturePro(pieceSpritesheet, src, dst, Vector2{0.0f, 0.0f}, 0.0f, WHITE);
+                        drawFiguresHelpMethod(PieceSprite::B_KING, nx, ny, scale);
                         break;
                     }
                     case Players::B_QUEEN: {
-                        Rectangle src = pieceSprites[static_cast<int>(PieceSprite::B_QUEEN)];
-                        auto dst = Rectangle{static_cast<float>(nx), static_cast<float>(ny), src.width * scale, src.height * scale};
-                        DrawTexturePro(pieceSpritesheet, src, dst, Vector2{0.0f, 0.0f}, 0.0f, WHITE);
+                        drawFiguresHelpMethod(PieceSprite::B_QUEEN, nx, ny, scale);
                         break;
                     }
                     case Players::B_ROOK: {
-                        Rectangle src = pieceSprites[static_cast<int>(PieceSprite::B_ROOK)];
-                        auto dst = Rectangle{static_cast<float>(nx), static_cast<float>(ny), src.width * scale, src.height * scale};
-                        DrawTexturePro(pieceSpritesheet, src, dst, Vector2{0.0f, 0.0f}, 0.0f, WHITE);
+                        drawFiguresHelpMethod(PieceSprite::B_ROOK, nx, ny, scale);
                         break;
                     }
                     case Players::B_BISHOP: {
-                        Rectangle src = pieceSprites[static_cast<int>(PieceSprite::B_BISHOP)];
-                        auto dst = Rectangle{static_cast<float>(nx), static_cast<float>(ny), src.width * scale, src.height * scale};
-                        DrawTexturePro(pieceSpritesheet, src, dst, Vector2{0.0f, 0.0f}, 0.0f, WHITE);
+                        drawFiguresHelpMethod(PieceSprite::B_BISHOP, nx, ny, scale);
                         break;
                     }
                     case Players::B_KNIGHT: {
-                        Rectangle src = pieceSprites[static_cast<int>(PieceSprite::B_KNIGHT)];
-                        auto dst = Rectangle{static_cast<float>(nx), static_cast<float>(ny), src.width * scale, src.height * scale};
-                        DrawTexturePro(pieceSpritesheet, src, dst, Vector2{0.0f, 0.0f}, 0.0f, WHITE);
+                        drawFiguresHelpMethod(PieceSprite::B_KNIGHT, nx, ny, scale);
                         break;
                     }
                     case Players::B_PAWN: {
-                        Rectangle src = pieceSprites[static_cast<int>(PieceSprite::B_PAWN)];
-                        auto dst = Rectangle{static_cast<float>(nx), static_cast<float>(ny), src.width * scale, src.height * scale};
-                        DrawTexturePro(pieceSpritesheet, src, dst, Vector2{0.0f, 0.0f}, 0.0f, WHITE);
+                        drawFiguresHelpMethod(PieceSprite::B_PAWN, nx, ny, scale);
                         break;
                     }
                     default:
