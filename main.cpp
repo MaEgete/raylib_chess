@@ -47,14 +47,14 @@ private:
     std::vector<Rectangle> pieceSprites{static_cast<int>(PieceSprite::COUNT)};
 
     int gMap[8][8] = {
-        {9,11,10,8,7,10,11,9},
-        {12,12,12,12,12,12,12,12},
-        {0,0,0,0,0,0,0,0},
-        {0,0,0,0,0,0,0,0},
-        {0,0,0,0,0,0,0,0},
-        {0,0,0,0,0,0,0,0},
-        {6,6,6,6,6,6,6,6},
-        {3,5,4,2,1,4,5,3},
+        {9 ,11,10,8 ,7 ,10,11,9},
+        {12 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
+        {0 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
+        {0 ,12 ,0 ,3 ,0 ,12 ,12 ,12},
+        {6 ,0 ,0 ,3 ,0 ,0 ,0 ,6},
+        {0 ,0 ,6 ,0 ,0 ,0 ,0 ,0},
+        {0 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
+        {6 ,5 ,4 ,2 ,1 ,4 ,5 ,3},
     };
 
 
@@ -63,6 +63,7 @@ private:
 
     // Alle moeglichen Zuege markieren
     std::vector<std::pair<int, int>> possibleMoves;
+
 
 
 
@@ -92,11 +93,9 @@ public:
 
     }
 
-
     ~Game() {
         UnloadTexture(pieceSpritesheet);
     }
-
 
     // Spiel zeichnen
     void draw() {
@@ -260,7 +259,7 @@ public:
         // Erreichbare Felder haben entweder den Zustand Players::EMPTY oder Players::wasAnderes
         // Bei Players::EMPTY soll eine andere Farbe angezeigt werden als bei Players::wasAnderes
 
-        if (IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
+        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
             Vector2 mousePos = GetMousePosition();
             // Maus hat aufs Spielfeld gedrueckt
             if (mousePos.x > fieldX && mousePos.x < (fieldX + fieldlength)
@@ -268,16 +267,23 @@ public:
                 std::cout << "Mouse clicked on field" << std::endl;
 
                 // Identifizieren des geklickten Blocks
-                float nx = mousePos.x - fieldX;
-                float ny = mousePos.y - fieldY;
+                float nx = mousePos.x - static_cast<float>(fieldX);
+                float ny = mousePos.y - static_cast<float>(fieldY);
 
                 int x = static_cast<int>(nx / blocksize);
                 int y = static_cast<int>(ny / blocksize);
 
                 std::cout << "x: " << x << " y: " << y << std::endl;
 
-                // Feld speichern
-                this->clickedField = {x, y};
+
+                if (this->clickedField.first == x && this->clickedField.second == y) {
+                    this->clickedField = {-1, -1};
+                }
+                else {
+                    // Feld speichern
+                    this->clickedField = {x, y};
+                }
+
 
                 calculatePossibleMoves();
 
@@ -292,21 +298,158 @@ public:
     }
 
     void calculatePossibleMoves() {
-        // Spieler
-        auto player = static_cast<Players>(gMap[this->clickedField.second][this->clickedField.first]);
+        // Spieler auf dem geklickten Feld
+
+        int x = this->clickedField.first;
+        int y = this->clickedField.second;
+
+
+        if (x == -1 && y == -1) {
+            std::cout << "No field clicked" << std::endl;
+            return;
+        }
+
+        this->possibleMoves.clear();
+
+        auto player = static_cast<Players>(gMap[y][x]);
 
         // Aufgrund des ermittelten Spielers, muessen die jeweiligen Move-Regeln herangezogen werden
 
+        switch (player) {
+            case Players::W_ROOK: {
+                std::cout << "W Rook" << std::endl;
+
+                // While-Schleife um zu ueberpruefen, wie viele Felder frei sind
+                // Richtung nach oben
+                int nx = x, ny = y;
+                while (ny > 0){
+                    nx = x;
+                    ny -= 1;
+                    if (static_cast<Players>(gMap[ny][nx]) >= Players::W_KING && static_cast<Players>(gMap[ny][nx]) < Players::B_KING){
+                        break;
+                    }
+                    possibleMoves.emplace_back(nx, ny);
+                    if (static_cast<Players>(gMap[ny][nx]) >= Players::B_KING) {
+                        break;
+                    }
+                }
+
+                // Richtung nach unten
+                nx = x;
+                ny = y;
+                while (ny < 7){
+                    nx = x;
+                    ny += 1;
+                    if (static_cast<Players>(gMap[ny][nx]) >= Players::W_KING && static_cast<Players>(gMap[ny][nx]) < Players::B_KING){
+                        break;
+                    }
+                    possibleMoves.emplace_back(nx, ny);
+                    if (static_cast<Players>(gMap[ny][nx]) >= Players::B_KING) {
+                        break;
+                    }
+                }
+
+                // Richtung nach links
+                nx = x;
+                ny = y;
+                while (nx > 0){
+                    nx -= 1;
+                    ny = y;
+                    if (static_cast<Players>(gMap[ny][nx]) >= Players::W_KING && static_cast<Players>(gMap[ny][nx]) < Players::B_KING){
+                        break;
+                    }
+                    possibleMoves.emplace_back(nx, ny);
+                    if (static_cast<Players>(gMap[ny][nx]) >= Players::B_KING) {
+                        break;
+                    }
+                }
+
+                // Richtung nach rechts
+                nx = x;
+                ny = y;
+                while (nx > 0){
+                    nx += 1;
+                    ny = y;
+                    if (static_cast<Players>(gMap[ny][nx]) >= Players::W_KING && static_cast<Players>(gMap[ny][nx]) < Players::B_KING){
+                        break;
+                    }
+                    possibleMoves.emplace_back(nx, ny);
+                    if (static_cast<Players>(gMap[ny][nx]) >= Players::B_KING) {
+                        break;
+                    }
+                }
+
+                break;
+            }
+            case Players::B_ROOK: {
+                std::cout << "B Rook" << std::endl;
+                break;
+            }
+            case Players::W_PAWN: {
+                // gMap[y][x] ueberpruefen, ob die jeweiligen Felder zum spielen frei sind (0)
+                std::cout << "W Pawn" << std::endl;
+                if (y > 0) {
+                    if (static_cast<Players>(gMap[y-1][x]) == Players::EMPTY) {
+                        std::cout << "Feld frei" << std::endl;
+                        possibleMoves.emplace_back(x, y-1);
+                        // y == 6 => Weisser Bauer ist noch auf seiner Startlinie
+                        if (y == 6) {
+                            possibleMoves.emplace_back(x, y-2);
+                        }
+                    }
+                    if (x > 0 && static_cast<Players>(gMap[y-1][x-1]) != Players::EMPTY) {
+                        if (static_cast<Players>(gMap[y-1][x-1]) >= Players::W_KING && static_cast<Players>(gMap[y-1][x-1]) < Players::B_KING){
+                            break;
+                        }
+                        possibleMoves.emplace_back(x-1, y-1);
+                    }
+                    if (x < 7 && static_cast<Players>(gMap[y-1][x+1]) != Players::EMPTY) {
+                        if (static_cast<Players>(gMap[y-1][x+1]) >= Players::W_KING && static_cast<Players>(gMap[y-1][x+1]) < Players::B_KING){
+                            break;
+                        }
+                        possibleMoves.emplace_back(x+1, y-1);
+                    }
+                }
+                break;
+            }
+            case Players::B_PAWN: {
+                // gMap[y][x] ueberpruefen, ob die jeweiligen Felder zum spielen frei sind (0)
+                std::cout << "B Pawn" << std::endl;
+                if (y < 7) {
+                    if (static_cast<Players>(gMap[y+1][x]) == Players::EMPTY) {
+                        std::cout << "Feld frei" << std::endl;
+                        possibleMoves.emplace_back(x, y+1);
+                        // y == 6 => Weisser Bauer ist noch auf seiner Startlinie
+                        if (y == 1) {
+                            possibleMoves.emplace_back(x, y+2);
+                        }
+                    }
+                    if (x > 0 && static_cast<Players>(gMap[y+1][x-1]) != Players::EMPTY) {
+                        possibleMoves.emplace_back(x-1, y+1);
+                    }
+                    if (x < 7 && static_cast<Players>(gMap[y+1][x+1]) != Players::EMPTY) {
+                        possibleMoves.emplace_back(x+1, y+1);
+                    }
+                }
+                break;
+            }
+            case Players::EMPTY:
+            default:
+                std::cout << "No valid move" << std::endl;
+                break;
+        }
 
 
-
-        this->possibleMoves.clear();
 
         // Output = Anzeige aller moeglichen Felder
     }
 
     void drawPossibleMoves() {
-
+        for (auto move : possibleMoves) {
+            float nx = this->fieldX + (blocksize * move.first);
+            float ny = this->fieldY + (blocksize * move.second);
+            DrawRectangle(nx, ny, blocksize, blocksize, {140,0,0,255});
+        }
     }
 
 
