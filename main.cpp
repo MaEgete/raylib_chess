@@ -47,14 +47,14 @@ private:
     std::vector<Rectangle> pieceSprites{static_cast<int>(PieceSprite::COUNT)};
 
     int gMap[8][8] = {
-        {9 ,11,10,8 ,7 ,10,11,0},
+        {9 ,11,10,8 ,7 ,10,11,9},
         {12 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
         {0 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
         {0 ,12 ,0 ,9 ,0 ,0 ,12 ,12},
         {6 ,0 ,0 ,9 ,0 ,12 ,0 ,6},
         {0 ,0 ,6 ,0 ,0 ,0 ,0 ,0},
         {0 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
-        {6 ,5 ,4 ,2 ,1 ,4 ,5 ,3},
+        {3 ,5 ,4 ,2 ,1 ,4 ,5 ,3},
     };
 
 
@@ -112,7 +112,7 @@ public:
         moveFigure();
     }
 
-    void drawText() {
+    void drawText() const {
         DrawText(TextFormat("%s to move", (this->turn ? "White" : "Black"), 20), 10, 10, 20, WHITE);
     }
 
@@ -149,6 +149,7 @@ public:
             float nx = this->fieldX + (this->blocksize * clickedField.first);
             float ny = this->fieldY + (this->blocksize * clickedField.second);
             DrawRectangle(nx, ny, this->blocksize, this->blocksize, {255,0,0,255});
+            DrawRectangleLines(nx, ny, this->blocksize, this->blocksize, BLACK);
 
             drawPossibleMoves();
 
@@ -323,6 +324,20 @@ public:
         // Aufgrund des ermittelten Spielers, muessen die jeweiligen Move-Regeln herangezogen werden
 
         switch (player) {
+
+            case Players::W_KING: {
+                break;
+            }
+            case Players::B_KING: {
+                break;
+            }
+            case Players::W_QUEEN: {
+                break;
+            }
+            case Players::B_QUEEN: {
+                break;
+            }
+
             case Players::W_ROOK: {
                 std::cout << "W Rook" << std::endl;
 
@@ -332,7 +347,7 @@ public:
                 while (ny > 0){
                     nx = x;
                     ny -= 1;
-                    if (static_cast<Players>(gMap[ny][nx]) >= Players::W_KING && static_cast<Players>(gMap[ny][nx]) < Players::B_KING){
+                    if ((static_cast<Players>(gMap[ny][nx]) >= Players::W_KING && static_cast<Players>(gMap[ny][nx]) < Players::B_KING) || ny < 0){
                         break;
                     }
                     possibleMoves.emplace_back(nx, ny);
@@ -347,7 +362,7 @@ public:
                 while (ny < 7){
                     nx = x;
                     ny += 1;
-                    if (static_cast<Players>(gMap[ny][nx]) >= Players::W_KING && static_cast<Players>(gMap[ny][nx]) < Players::B_KING){
+                    if ((static_cast<Players>(gMap[ny][nx]) >= Players::W_KING && static_cast<Players>(gMap[ny][nx]) < Players::B_KING) || ny > 7){
                         break;
                     }
                     possibleMoves.emplace_back(nx, ny);
@@ -362,7 +377,7 @@ public:
                 while (nx > 0){
                     nx -= 1;
                     ny = y;
-                    if (static_cast<Players>(gMap[ny][nx]) >= Players::W_KING && static_cast<Players>(gMap[ny][nx]) < Players::B_KING){
+                    if ((static_cast<Players>(gMap[ny][nx]) >= Players::W_KING && static_cast<Players>(gMap[ny][nx]) < Players::B_KING) || nx < 0){
                         break;
                     }
                     possibleMoves.emplace_back(nx, ny);
@@ -377,7 +392,7 @@ public:
                 while (nx > 0){
                     nx += 1;
                     ny = y;
-                    if (static_cast<Players>(gMap[ny][nx]) >= Players::W_KING && static_cast<Players>(gMap[ny][nx]) < Players::B_KING){
+                    if ((static_cast<Players>(gMap[ny][nx]) >= Players::W_KING && static_cast<Players>(gMap[ny][nx]) < Players::B_KING) || nx > 7){
                         break;
                     }
                     possibleMoves.emplace_back(nx, ny);
@@ -397,7 +412,7 @@ public:
                 while (ny > 0){
                     nx = x;
                     ny -= 1;
-                    if (static_cast<Players>(gMap[ny][nx]) >= Players::B_KING){
+                    if ((static_cast<Players>(gMap[ny][nx]) >= Players::B_KING) || ny < 0){
                         break;
                     }
                     possibleMoves.emplace_back(nx, ny);
@@ -412,7 +427,7 @@ public:
                 while (ny < 7){
                     nx = x;
                     ny += 1;
-                    if (static_cast<Players>(gMap[ny][nx]) >= Players::B_KING){
+                    if ((static_cast<Players>(gMap[ny][nx]) >= Players::B_KING) || ny > 7){
                         break;
                     }
                     possibleMoves.emplace_back(nx, ny);
@@ -427,7 +442,7 @@ public:
                 while (nx > 0){
                     nx -= 1;
                     ny = y;
-                    if (static_cast<Players>(gMap[ny][nx]) >= Players::B_KING){
+                    if ((static_cast<Players>(gMap[ny][nx]) >= Players::B_KING) || nx < 0){
                         break;
                     }
                     possibleMoves.emplace_back(nx, ny);
@@ -442,7 +457,7 @@ public:
                 while (nx > 0){
                     nx += 1;
                     ny = y;
-                    if (static_cast<Players>(gMap[ny][nx]) >= Players::B_KING){
+                    if ((static_cast<Players>(gMap[ny][nx]) >= Players::B_KING) || nx > 7){
                         break;
                     }
                     possibleMoves.emplace_back(nx, ny);
@@ -453,6 +468,21 @@ public:
 
                 break;
             }
+
+            case Players::W_BISHOP: {
+                break;
+            }
+            case Players::B_BISHOP: {
+                break;
+            }
+
+            case Players::W_KNIGHT: {
+                break;
+            }
+            case Players::B_KNIGHT: {
+                break;
+            }
+
             case Players::W_PAWN: {
                 // gMap[y][x] ueberpruefen, ob die jeweiligen Felder zum spielen frei sind (0)
                 std::cout << "W Pawn" << std::endl;
@@ -523,6 +553,7 @@ public:
             float nx = this->fieldX + (blocksize * move.first);
             float ny = this->fieldY + (blocksize * move.second);
             DrawRectangle(nx, ny, blocksize, blocksize, {140,0,0,255});
+            DrawRectangleLines(nx, ny, blocksize, blocksize, BLACK);
         }
     }
 
