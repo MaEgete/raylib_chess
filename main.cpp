@@ -47,13 +47,13 @@ private:
     std::vector<Rectangle> pieceSprites{static_cast<int>(PieceSprite::COUNT)};
 
     int gMap[8][8] = {
-        {9 ,11,10,8 ,7 ,10,0,9},
+        {9 ,11,0,8 ,7 ,10,0,9},
         {12 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
         {0 ,0 ,0 ,0 ,0 ,11 ,0 ,0},
-        {0 ,12 ,0 ,5 ,0 ,0 ,12 ,12},
-        {6 ,0 ,0 ,0 ,0 ,12 ,0 ,6},
-        {0 ,0 ,6 ,0 ,0 ,0 ,0 ,0},
-        {0 ,0 ,0 ,0 ,0 ,12 ,0 ,0},
+        {0 ,12 ,10 ,5 ,0 ,0 ,12 ,12},
+        {6 ,0 ,4 ,4 ,0 ,12 ,0 ,6},
+        {0 ,12 ,6 ,0 ,0 ,0 ,0 ,0},
+        {4 ,10 ,0 ,4 ,4 ,12 ,0 ,0},
         {3 ,5 ,4 ,2 ,1 ,4 ,5 ,3},
     };
 
@@ -454,9 +454,94 @@ public:
             }
 
             case Players::W_BISHOP: {
+
+                int startX = x;
+                int startY = y;
+
+                auto tryMove = [&](int dx, int dy) {
+                    int nx = startX;
+                    int ny = startY;
+
+                    while (true) {
+                        nx += dx;
+                        ny += dy;
+
+                        if (nx < 0 || nx > 7 || ny < 0 || ny > 7) {
+                            break;
+                        }
+
+                        auto target = static_cast<Players>(gMap[ny][nx]);
+
+                        // Weiss darf weiss nicht schlagen
+                        if (target >= Players::W_KING && target < Players::B_KING) {
+                            break;
+                        }
+
+                        // Weiss darf Schwarz schlagen
+                        if (target >= Players::B_KING) {
+                            possibleMoves.emplace_back(nx, ny);
+                            break;
+                        }
+                        // Leeres Feld ist begehbar
+                        if (target == Players::EMPTY) {
+                            possibleMoves.emplace_back(nx, ny);
+                        }
+
+                    }
+
+                };
+
+                tryMove(1,-1); // oben rechts
+                tryMove(-1,-1); // oben links
+                tryMove(1,1); // unten rechts
+                tryMove(-1, 1); // unten links
+
                 break;
             }
             case Players::B_BISHOP: {
+
+
+                int startX = x;
+                int startY = y;
+
+                auto tryMove = [&](int dx, int dy) {
+                    int nx = startX;
+                    int ny = startY;
+
+                    while (true) {
+                        nx += dx;
+                        ny += dy;
+
+                        if (nx < 0 || nx > 7 || ny < 0 || ny > 7) {
+                            break;
+                        }
+
+                        auto target = static_cast<Players>(gMap[ny][nx]);
+
+                        // Schwarz darf schwarz nicht schlagen
+                        if (target >= Players::W_KING && target >= Players::B_KING) {
+                            break;
+                        }
+                        // Schwarz darf weiss schlagen
+                        if (target >= Players::W_KING && target < Players::B_KING) {
+                            possibleMoves.emplace_back(nx, ny);
+                            break;
+                        }
+                        // Leeres Feld ist begehbar
+                        if (target == Players::EMPTY) {
+                            possibleMoves.emplace_back(nx, ny);
+                        }
+
+                    }
+
+                };
+
+                tryMove(1,-1); // oben rechts
+                tryMove(-1,-1); // oben links
+                tryMove(1,1); // unten rechts
+                tryMove(-1, 1); // unten links
+
+
                 break;
             }
 
