@@ -47,13 +47,13 @@ private:
     std::vector<Rectangle> pieceSprites{static_cast<int>(PieceSprite::COUNT)};
 
     int gMap[8][8] = {
-        {9 ,11,0,8 ,7 ,10,0,9},
-        {12 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
-        {0 ,0 ,0 ,0 ,0 ,11 ,0 ,0},
-        {0 ,12 ,10 ,5 ,0 ,0 ,12 ,12},
-        {6 ,0 ,4 ,4 ,0 ,12 ,0 ,6},
-        {0 ,12 ,6 ,0 ,0 ,0 ,0 ,0},
-        {4 ,10 ,0 ,4 ,4 ,12 ,0 ,0},
+        {9 ,11,10,8 ,7 ,10,11,9},
+        {12 ,12 ,12 ,12 ,12 ,12 ,12 ,12},
+        {0 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
+        {0 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
+        {0 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
+        {0 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
+        {6 ,6 ,6 ,6 ,6 ,6 ,6 ,6},
         {3 ,5 ,4 ,2 ,1 ,4 ,5 ,3},
     };
 
@@ -310,15 +310,151 @@ public:
         switch (player) {
 
             case Players::W_KING: {
+
+                auto tryMove = [&](int dx, int dy) {
+
+                    int nx = x;
+                    int ny = y;
+
+                    nx += dx;
+                    ny += dy;
+
+                    if (nx < 0 || nx > 7 || ny < 0 || ny > 7) {
+                        return;
+                    }
+
+                    auto player = static_cast<Players>(gMap[ny][nx]);
+
+                    if (player == Players::EMPTY || player >= Players::B_KING) {
+                        possibleMoves.emplace_back(nx, ny);
+                    }
+                };
+
+                tryMove(0, -1);
+                tryMove(1, -1);
+                tryMove(1, 0);
+                tryMove(1, 1);
+                tryMove(0, 1);
+                tryMove(-1, 1);
+                tryMove(-1, 0);
+                tryMove(-1, -1);
+
                 break;
             }
             case Players::B_KING: {
+
+                auto tryMove = [&](int dx, int dy) {
+
+                    int nx = x;
+                    int ny = y;
+
+                    nx += dx;
+                    ny += dy;
+
+                    if (nx < 0 || nx > 7 || ny < 0 || ny > 7) {
+                        return;
+                    }
+
+                    auto player = static_cast<Players>(gMap[ny][nx]);
+
+                    if (player == Players::EMPTY || (player >= Players::W_KING && player < Players::B_KING)) {
+                        possibleMoves.emplace_back(nx, ny);
+                    }
+                };
+
+                tryMove(0, -1);
+                tryMove(1, -1);
+                tryMove(1, 0);
+                tryMove(1, 1);
+                tryMove(0, 1);
+                tryMove(-1, 1);
+                tryMove(-1, 0);
+                tryMove(-1, -1);
+
+
                 break;
             }
+
             case Players::W_QUEEN: {
+
+                auto tryMove = [&](int dx, int dy) {
+                    int nx = x;
+                    int ny = y;
+
+                    while (nx >= 0 && nx < 8 && ny >= 0 && ny < 8) {
+                        nx += dx;
+                        ny += dy;
+
+                        if (nx < 0 || nx > 7 || ny < 0 || ny > 7) {
+                            return;
+                        }
+
+                        auto player = static_cast<Players>(gMap[ny][nx]);
+
+                        if (player == Players::EMPTY) {
+                            possibleMoves.emplace_back(nx, ny);
+                        }
+                        else if (player >= Players::W_KING && player < Players::B_KING) {
+                            break;
+                        }
+                        else if (player >= Players::B_KING) {
+                            possibleMoves.emplace_back(nx, ny);
+                            break;
+                        }
+                    }
+                };
+
+                tryMove(0, -1);
+                tryMove(1, -1);
+                tryMove(1, 0);
+                tryMove(1, 1);
+                tryMove(0, 1);
+                tryMove(-1, 1);
+                tryMove(-1, 0);
+                tryMove(-1, -1);
+
+
                 break;
             }
             case Players::B_QUEEN: {
+
+                auto tryMove = [&](int dx, int dy) {
+                    int nx = x;
+                    int ny = y;
+
+                    while (nx >= 0 && nx < 8 && ny >= 0 && ny < 8) {
+                        nx += dx;
+                        ny += dy;
+
+                        if (nx < 0 || nx > 7 || ny < 0 || ny > 7) {
+                            return;
+                        }
+
+                        auto player = static_cast<Players>(gMap[ny][nx]);
+
+                        if (player == Players::EMPTY) {
+                            possibleMoves.emplace_back(nx, ny);
+                        }
+                        else if (player >= Players::B_KING) {
+                            break;
+                        }
+                        else if (player >= Players::W_KING && player < Players::B_KING) {
+                            possibleMoves.emplace_back(nx, ny);
+                            break;
+                        }
+                    }
+                };
+
+                tryMove(0, -1);
+                tryMove(1, -1);
+                tryMove(1, 0);
+                tryMove(1, 1);
+                tryMove(0, 1);
+                tryMove(-1, 1);
+                tryMove(-1, 0);
+                tryMove(-1, -1);
+
+
                 break;
             }
 
@@ -660,16 +796,15 @@ public:
                 }
                 break;
             }
+
             case Players::EMPTY:
             default:
                 std::cout << "No valid move" << std::endl;
                 break;
         }
 
-
-
-        // Output = Anzeige aller moeglichen Felder
     }
+
 
     void drawPossibleMoves() {
         for (auto move : possibleMoves) {
