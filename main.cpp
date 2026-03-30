@@ -156,15 +156,17 @@ public:
         }
     }
 
-    void drawFiguresHelpMethod(PieceSprite pieceSprite, int nx, int ny, float scale) const {
-        Rectangle src = pieceSprites[static_cast<int>(pieceSprite)];
-        auto dst = Rectangle{static_cast<float>(nx), static_cast<float>(ny), src.width * scale, src.height * scale};
-        DrawTexturePro(pieceSpritesheet, src, dst, Vector2{0.0f, 0.0f}, 0.0f, WHITE);
-    }
+
 
     void drawFigures() {
 
         float scale = 2.5f;
+
+        auto drawFiguresHelpMethod = [&](PieceSprite pieceSprite, int nx, int ny) {
+            Rectangle src = pieceSprites[static_cast<int>(pieceSprite)];
+            auto dst = Rectangle{static_cast<float>(nx), static_cast<float>(ny), src.width * scale, src.height * scale};
+            DrawTexturePro(pieceSpritesheet, src, dst, Vector2{0.0f, 0.0f}, 0.0f, WHITE);
+        };
 
         for (int y = 0; y < 8; y++) {
             for (int x = 0; x < 8; x++) {
@@ -179,52 +181,52 @@ public:
                         break;
 
                     case Players::W_KING: {
-                        drawFiguresHelpMethod(PieceSprite::W_KING, nx, ny, scale);
+                        drawFiguresHelpMethod(PieceSprite::W_KING, nx, ny);
                         break;
                     }
                     case Players::W_QUEEN: {
-                        drawFiguresHelpMethod(PieceSprite::W_QUEEN, nx, ny, scale);
+                        drawFiguresHelpMethod(PieceSprite::W_QUEEN, nx, ny);
                         break;
                     }
                     case Players::W_ROOK: {
-                        drawFiguresHelpMethod(PieceSprite::W_ROOK, nx, ny, scale);
+                        drawFiguresHelpMethod(PieceSprite::W_ROOK, nx, ny);
                         break;
                     }
                     case Players::W_BISHOP: {
-                        drawFiguresHelpMethod(PieceSprite::W_BISHOP, nx, ny, scale);
+                        drawFiguresHelpMethod(PieceSprite::W_BISHOP, nx, ny);
                         break;
                     }
                     case Players::W_KNIGHT: {
-                        drawFiguresHelpMethod(PieceSprite::W_KNIGHT, nx, ny, scale);
+                        drawFiguresHelpMethod(PieceSprite::W_KNIGHT, nx, ny);
                         break;
                     }
                     case Players::W_PAWN: {
-                        drawFiguresHelpMethod(PieceSprite::W_PAWN, nx, ny, scale);
+                        drawFiguresHelpMethod(PieceSprite::W_PAWN, nx, ny);
                         break;
                     }
 
                     case Players::B_KING: {
-                        drawFiguresHelpMethod(PieceSprite::B_KING, nx, ny, scale);
+                        drawFiguresHelpMethod(PieceSprite::B_KING, nx, ny);
                         break;
                     }
                     case Players::B_QUEEN: {
-                        drawFiguresHelpMethod(PieceSprite::B_QUEEN, nx, ny, scale);
+                        drawFiguresHelpMethod(PieceSprite::B_QUEEN, nx, ny);
                         break;
                     }
                     case Players::B_ROOK: {
-                        drawFiguresHelpMethod(PieceSprite::B_ROOK, nx, ny, scale);
+                        drawFiguresHelpMethod(PieceSprite::B_ROOK, nx, ny);
                         break;
                     }
                     case Players::B_BISHOP: {
-                        drawFiguresHelpMethod(PieceSprite::B_BISHOP, nx, ny, scale);
+                        drawFiguresHelpMethod(PieceSprite::B_BISHOP, nx, ny);
                         break;
                     }
                     case Players::B_KNIGHT: {
-                        drawFiguresHelpMethod(PieceSprite::B_KNIGHT, nx, ny, scale);
+                        drawFiguresHelpMethod(PieceSprite::B_KNIGHT, nx, ny);
                         break;
                     }
                     case Players::B_PAWN: {
-                        drawFiguresHelpMethod(PieceSprite::B_PAWN, nx, ny, scale);
+                        drawFiguresHelpMethod(PieceSprite::B_PAWN, nx, ny);
                         break;
                     }
                     default:
@@ -459,36 +461,27 @@ public:
             }
 
             case Players::W_KNIGHT: {
-
                 int nx = x;
                 int ny = y;
 
+                auto tryMove = [&](int tx, int ty) {
+                    if (tx >= 0 && tx < 8 && ty >= 0 && ty < 8) {
+                        auto target = static_cast<Players>(gMap[ty][tx]);
+                        if (target == Players::EMPTY || target >= Players::B_KING) {
+                            possibleMoves.emplace_back(tx, ty);
+                        }
+                    }
+                };
 
-                if ((nx+1) < 8 && (ny-2) >= 0 && (static_cast<Players>(gMap[ny-2][nx+1]) >= Players::B_KING || static_cast<Players>(gMap[ny-2][nx+1]) == Players::EMPTY)){
-                    possibleMoves.emplace_back(nx+1, ny-2);
-                }
-                if ((nx+2) < 8 && (ny-1) >= 0 && (static_cast<Players>(gMap[ny-1][nx+2]) >= Players::B_KING || static_cast<Players>(gMap[ny-1][nx+2]) == Players::EMPTY)){
-                    possibleMoves.emplace_back(nx+2, ny-1);
-                }
-                if ((nx+2) < 8 && (ny+1) < 8 && (static_cast<Players>(gMap[ny+1][nx+2]) >= Players::B_KING || static_cast<Players>(gMap[ny+1][nx+2]) == Players::EMPTY)){
-                    possibleMoves.emplace_back(nx+2, ny+1);
-                }
-                if ((nx+1) < 8 && (ny+2) < 8 && (static_cast<Players>(gMap[ny+2][nx+1]) >= Players::B_KING || static_cast<Players>(gMap[ny+2][nx+1]) == Players::EMPTY)){
-                    possibleMoves.emplace_back(nx+1, ny+2);
-                }
+                tryMove(nx+1, ny-2);
+                tryMove(nx+2, ny-1);
+                tryMove(nx+2, ny+1);
+                tryMove(nx+1, ny+2);
+                tryMove(nx-1, ny+2);
+                tryMove(nx-2, ny+1);
+                tryMove(nx-2, ny-1);
+                tryMove(nx-1, ny-2);
 
-                if ((nx-1) >= 0 && (ny+2) < 8 && (static_cast<Players>(gMap[ny+2][nx-1]) >= Players::B_KING || static_cast<Players>(gMap[ny+2][nx-1]) == Players::EMPTY)){
-                    possibleMoves.emplace_back(nx-1, ny+2);
-                }
-                if ((nx-2) >= 0 && (ny+1) < 8 && (static_cast<Players>(gMap[ny+1][nx-2]) >= Players::B_KING || static_cast<Players>(gMap[ny+1][nx-2]) == Players::EMPTY)){
-                    possibleMoves.emplace_back(nx-2, ny+1);
-                }
-                if ((nx-2) >= 0 && (ny-1) >= 0 && (static_cast<Players>(gMap[ny-1][nx-2]) >= Players::B_KING || static_cast<Players>(gMap[ny-1][nx-2]) == Players::EMPTY)){
-                    possibleMoves.emplace_back(nx-2, ny-1);
-                }
-                if ((nx-1) >= 0 && (ny-2) >= 0 && (static_cast<Players>(gMap[ny-2][nx-1]) >= Players::B_KING || static_cast<Players>(gMap[ny-2][nx-1]) == Players::EMPTY)){
-                    possibleMoves.emplace_back(nx-1, ny-2);
-                }
 
                 break;
             }
@@ -497,31 +490,24 @@ public:
                 int nx = x;
                 int ny = y;
 
-                if ((nx+1) < 8 && (ny-2) >= 0 && ((static_cast<Players>(gMap[ny-2][nx+1]) >= Players::W_KING && static_cast<Players>(gMap[ny-2][nx+1]) < Players::B_KING) || static_cast<Players>(gMap[ny-2][nx+1]) == Players::EMPTY)){
-                    possibleMoves.emplace_back(nx+1, ny-2);
-                }
-                if ((nx+2) < 8 && (ny-1) >= 0 && ((static_cast<Players>(gMap[ny-1][nx+2]) >= Players::W_KING && static_cast<Players>(gMap[ny-1][nx+2]) < Players::B_KING) || static_cast<Players>(gMap[ny-1][nx+2]) == Players::EMPTY)){
-                    possibleMoves.emplace_back(nx+2, ny-1);
-                }
-                if ((nx+2) < 8 && (ny+1) < 8 && ((static_cast<Players>(gMap[ny+1][nx+2]) >= Players::W_KING && static_cast<Players>(gMap[ny+1][nx+2]) < Players::B_KING) || static_cast<Players>(gMap[ny+1][nx+2]) == Players::EMPTY)){
-                    possibleMoves.emplace_back(nx+2, ny+1);
-                }
-                if ((nx+1) < 8 && (ny+2) < 8 && ((static_cast<Players>(gMap[ny+2][nx+1]) >= Players::W_KING && static_cast<Players>(gMap[ny+2][nx+1]) < Players::B_KING) || static_cast<Players>(gMap[ny+2][nx+1]) == Players::EMPTY)){
-                    possibleMoves.emplace_back(nx+1, ny+2);
-                }
 
-                if ((nx-1) >= 0 && (ny+2) < 8 && ((static_cast<Players>(gMap[ny+2][nx-1]) >= Players::W_KING && static_cast<Players>(gMap[ny+2][nx-1]) < Players::B_KING) || static_cast<Players>(gMap[ny+2][nx-1]) == Players::EMPTY)){
-                    possibleMoves.emplace_back(nx-1, ny+2);
-                }
-                if ((nx-2) >= 0 && (ny+1) < 8 && ((static_cast<Players>(gMap[ny+1][nx-2]) >= Players::W_KING && static_cast<Players>(gMap[ny+1][nx-2]) < Players::B_KING) || static_cast<Players>(gMap[ny+1][nx-2]) == Players::EMPTY)){
-                    possibleMoves.emplace_back(nx-2, ny+1);
-                }
-                if ((nx-2) >= 0 && (ny-1) >= 0 && ((static_cast<Players>(gMap[ny-1][nx-2]) >= Players::W_KING && static_cast<Players>(gMap[ny-1][nx-2]) < Players::B_KING) || static_cast<Players>(gMap[ny-1][nx-2]) == Players::EMPTY)){
-                    possibleMoves.emplace_back(nx-2, ny-1);
-                }
-                if ((nx-1) >= 0 && (ny-2) >= 0 && ((static_cast<Players>(gMap[ny-2][nx-1]) >= Players::W_KING && static_cast<Players>(gMap[ny-2][nx-1]) < Players::B_KING) || static_cast<Players>(gMap[ny-2][nx-1]) == Players::EMPTY)){
-                    possibleMoves.emplace_back(nx-1, ny-2);
-                }
+                auto tryMove = [&](int tx, int ty) {
+                    if (tx >= 0 && tx < 8 && ty >= 0 && ty < 8) {
+                        auto target = static_cast<Players>(gMap[ty][tx]);
+                        if (target == Players::EMPTY || (target >= Players::W_KING && target < Players::B_KING)) {
+                            possibleMoves.emplace_back(tx, ty);
+                        }
+                    }
+                };
+
+                tryMove(nx+1, ny-2);
+                tryMove(nx+2, ny-1);
+                tryMove(nx+2, ny+1);
+                tryMove(nx+1, ny+2);
+                tryMove(nx-1, ny+2);
+                tryMove(nx-2, ny+1);
+                tryMove(nx-2, ny-1);
+                tryMove(nx-1, ny-2);
 
                 break;
             }
