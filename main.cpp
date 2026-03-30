@@ -53,7 +53,7 @@ private:
         {0 ,12 ,0 ,5 ,0 ,0 ,12 ,12},
         {6 ,0 ,0 ,0 ,0 ,12 ,0 ,6},
         {0 ,0 ,6 ,0 ,0 ,0 ,0 ,0},
-        {0 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
+        {0 ,0 ,0 ,0 ,0 ,12 ,0 ,0},
         {3 ,5 ,4 ,2 ,1 ,4 ,5 ,3},
     };
 
@@ -526,15 +526,18 @@ public:
                     }
                     if (x > 0 && static_cast<Players>(gMap[y-1][x-1]) != Players::EMPTY) {
                         if (static_cast<Players>(gMap[y-1][x-1]) >= Players::W_KING && static_cast<Players>(gMap[y-1][x-1]) < Players::B_KING){
-                            break;
+
                         }
-                        possibleMoves.emplace_back(x-1, y-1);
+                        else {
+                            possibleMoves.emplace_back(x-1, y-1);
+                        }
                     }
                     if (x < 7 && static_cast<Players>(gMap[y-1][x+1]) != Players::EMPTY) {
                         if (static_cast<Players>(gMap[y-1][x+1]) >= Players::W_KING && static_cast<Players>(gMap[y-1][x+1]) < Players::B_KING){
-                            break;
                         }
-                        possibleMoves.emplace_back(x+1, y-1);
+                        else {
+                            possibleMoves.emplace_back(x+1, y-1);
+                        }
                     }
                 }
                 break;
@@ -551,17 +554,23 @@ public:
                             possibleMoves.emplace_back(x, y+2);
                         }
                     }
+                    // Richtung unten links
+                    // Wenn unten links ein Spieler ist
                     if (x > 0 && static_cast<Players>(gMap[y+1][x-1]) != Players::EMPTY) {
+                        // Wenn die Figur unten links Schwarz ist, dann soll nichts gemacht werden
                         if (static_cast<Players>(gMap[y+1][x-1]) >= Players::B_KING){
-                            break;
                         }
-                        possibleMoves.emplace_back(x-1, y+1);
+                        // Wenn der Spieler unten links ein Weisser ist
+                        else {
+                            possibleMoves.emplace_back(x-1, y+1);
+                        }
                     }
                     if (x < 7 && static_cast<Players>(gMap[y+1][x+1]) != Players::EMPTY) {
                         if (static_cast<Players>(gMap[y+1][x+1]) >= Players::B_KING){
-                            break;
                         }
-                        possibleMoves.emplace_back(x+1, y+1);
+                        else {
+                            possibleMoves.emplace_back(x+1, y+1);
+                        }
                     }
                 }
                 break;
