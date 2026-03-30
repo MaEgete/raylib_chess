@@ -47,11 +47,11 @@ private:
     std::vector<Rectangle> pieceSprites{static_cast<int>(PieceSprite::COUNT)};
 
     int gMap[8][8] = {
-        {9 ,11,10,8 ,7 ,10,11,9},
+        {9 ,11,10,8 ,7 ,10,0,9},
         {12 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
-        {0 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
-        {0 ,12 ,0 ,9 ,0 ,0 ,12 ,12},
-        {6 ,0 ,0 ,9 ,0 ,12 ,0 ,6},
+        {0 ,0 ,0 ,0 ,0 ,11 ,0 ,0},
+        {0 ,12 ,0 ,5 ,0 ,0 ,12 ,12},
+        {6 ,0 ,0 ,0 ,0 ,12 ,0 ,6},
         {0 ,0 ,6 ,0 ,0 ,0 ,0 ,0},
         {0 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
         {3 ,5 ,4 ,2 ,1 ,4 ,5 ,3},
@@ -459,9 +459,70 @@ public:
             }
 
             case Players::W_KNIGHT: {
+
+                int nx = x;
+                int ny = y;
+
+
+                if ((nx+1) < 8 && (ny-2) >= 0 && (static_cast<Players>(gMap[ny-2][nx+1]) >= Players::B_KING || static_cast<Players>(gMap[ny-2][nx+1]) == Players::EMPTY)){
+                    possibleMoves.emplace_back(nx+1, ny-2);
+                }
+                if ((nx+2) < 8 && (ny-1) >= 0 && (static_cast<Players>(gMap[ny-1][nx+2]) >= Players::B_KING || static_cast<Players>(gMap[ny-1][nx+2]) == Players::EMPTY)){
+                    possibleMoves.emplace_back(nx+2, ny-1);
+                }
+                if ((nx+2) < 8 && (ny+1) < 8 && (static_cast<Players>(gMap[ny+1][nx+2]) >= Players::B_KING || static_cast<Players>(gMap[ny+1][nx+2]) == Players::EMPTY)){
+                    possibleMoves.emplace_back(nx+2, ny+1);
+                }
+                if ((nx+1) < 8 && (ny+2) < 8 && (static_cast<Players>(gMap[ny+2][nx+1]) >= Players::B_KING || static_cast<Players>(gMap[ny+2][nx+1]) == Players::EMPTY)){
+                    possibleMoves.emplace_back(nx+1, ny+2);
+                }
+
+                if ((nx-1) >= 0 && (ny+2) < 8 && (static_cast<Players>(gMap[ny+2][nx-1]) >= Players::B_KING || static_cast<Players>(gMap[ny+2][nx-1]) == Players::EMPTY)){
+                    possibleMoves.emplace_back(nx-1, ny+2);
+                }
+                if ((nx-2) >= 0 && (ny+1) < 8 && (static_cast<Players>(gMap[ny+1][nx-2]) >= Players::B_KING || static_cast<Players>(gMap[ny+1][nx-2]) == Players::EMPTY)){
+                    possibleMoves.emplace_back(nx-2, ny+1);
+                }
+                if ((nx-2) >= 0 && (ny-1) >= 0 && (static_cast<Players>(gMap[ny-1][nx-2]) >= Players::B_KING || static_cast<Players>(gMap[ny-1][nx-2]) == Players::EMPTY)){
+                    possibleMoves.emplace_back(nx-2, ny-1);
+                }
+                if ((nx-1) >= 0 && (ny-2) >= 0 && (static_cast<Players>(gMap[ny-2][nx-1]) >= Players::B_KING || static_cast<Players>(gMap[ny-2][nx-1]) == Players::EMPTY)){
+                    possibleMoves.emplace_back(nx-1, ny-2);
+                }
+
                 break;
             }
             case Players::B_KNIGHT: {
+
+                int nx = x;
+                int ny = y;
+
+                if ((nx+1) < 8 && (ny-2) >= 0 && ((static_cast<Players>(gMap[ny-2][nx+1]) >= Players::W_KING && static_cast<Players>(gMap[ny-2][nx+1]) < Players::B_KING) || static_cast<Players>(gMap[ny-2][nx+1]) == Players::EMPTY)){
+                    possibleMoves.emplace_back(nx+1, ny-2);
+                }
+                if ((nx+2) < 8 && (ny-1) >= 0 && ((static_cast<Players>(gMap[ny-1][nx+2]) >= Players::W_KING && static_cast<Players>(gMap[ny-1][nx+2]) < Players::B_KING) || static_cast<Players>(gMap[ny-1][nx+2]) == Players::EMPTY)){
+                    possibleMoves.emplace_back(nx+2, ny-1);
+                }
+                if ((nx+2) < 8 && (ny+1) < 8 && ((static_cast<Players>(gMap[ny+1][nx+2]) >= Players::W_KING && static_cast<Players>(gMap[ny+1][nx+2]) < Players::B_KING) || static_cast<Players>(gMap[ny+1][nx+2]) == Players::EMPTY)){
+                    possibleMoves.emplace_back(nx+2, ny+1);
+                }
+                if ((nx+1) < 8 && (ny+2) < 8 && ((static_cast<Players>(gMap[ny+2][nx+1]) >= Players::W_KING && static_cast<Players>(gMap[ny+2][nx+1]) < Players::B_KING) || static_cast<Players>(gMap[ny+2][nx+1]) == Players::EMPTY)){
+                    possibleMoves.emplace_back(nx+1, ny+2);
+                }
+
+                if ((nx-1) >= 0 && (ny+2) < 8 && ((static_cast<Players>(gMap[ny+2][nx-1]) >= Players::W_KING && static_cast<Players>(gMap[ny+2][nx-1]) < Players::B_KING) || static_cast<Players>(gMap[ny+2][nx-1]) == Players::EMPTY)){
+                    possibleMoves.emplace_back(nx-1, ny+2);
+                }
+                if ((nx-2) >= 0 && (ny+1) < 8 && ((static_cast<Players>(gMap[ny+1][nx-2]) >= Players::W_KING && static_cast<Players>(gMap[ny+1][nx-2]) < Players::B_KING) || static_cast<Players>(gMap[ny+1][nx-2]) == Players::EMPTY)){
+                    possibleMoves.emplace_back(nx-2, ny+1);
+                }
+                if ((nx-2) >= 0 && (ny-1) >= 0 && ((static_cast<Players>(gMap[ny-1][nx-2]) >= Players::W_KING && static_cast<Players>(gMap[ny-1][nx-2]) < Players::B_KING) || static_cast<Players>(gMap[ny-1][nx-2]) == Players::EMPTY)){
+                    possibleMoves.emplace_back(nx-2, ny-1);
+                }
+                if ((nx-1) >= 0 && (ny-2) >= 0 && ((static_cast<Players>(gMap[ny-2][nx-1]) >= Players::W_KING && static_cast<Players>(gMap[ny-2][nx-1]) < Players::B_KING) || static_cast<Players>(gMap[ny-2][nx-1]) == Players::EMPTY)){
+                    possibleMoves.emplace_back(nx-1, ny-2);
+                }
+
                 break;
             }
 
@@ -552,6 +613,12 @@ int main() {
 
     InitWindow(screenW, screenH, "chess");
 
+    Camera2D cam = {0};
+    cam.target = Vector2{ screenW / 2.0f, screenH / 2.0f };
+    cam.offset = Vector2{ screenW / 2.0f, screenH / 2.0f };
+    cam.rotation = 0.0f;
+    cam.zoom = 1.0f;
+
     SetTargetFPS(60);
 
     Game game;
@@ -561,8 +628,12 @@ int main() {
 
         ClearBackground(BROWN);
 
+        BeginMode2D(cam);
+
         game.update();
         game.draw();
+
+        EndMode2D();
 
         EndDrawing();
     }
