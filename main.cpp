@@ -7,6 +7,11 @@ class Game {
 
 private:
 
+    //Figuren verschieben koennen
+    //-> Brett geraeusch erklingen lassen
+
+    //Funktion isPlayerWhite/Black() schreiben
+
     int fieldlength;
 
     int fieldX;
@@ -35,6 +40,7 @@ private:
         B_PAWN,       // B Bauer = 12
     };
 
+    // Texture des Bildes der Schachfiguren
     Texture2D pieceSpritesheet;
 
     // Fuer die Bilder der Figuren
@@ -44,14 +50,15 @@ private:
         COUNT
     };
 
+    // Hier werden die Rectangles der Texture gespeichert
     std::vector<Rectangle> pieceSprites{static_cast<int>(PieceSprite::COUNT)};
 
     int gMap[8][8] = {
         {9 ,11,10,8 ,7 ,10,11,9},
         {12 ,12 ,12 ,12 ,12 ,12 ,12 ,12},
         {0 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
-        {0 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
-        {0 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
+        {9 ,0,10,8 ,7 ,10,0,9},
+        {0 ,0 ,0 ,0 ,9 ,0 ,0 ,0},
         {0 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
         {6 ,6 ,6 ,6 ,6 ,6 ,6 ,6},
         {3 ,5 ,4 ,2 ,1 ,4 ,5 ,3},
@@ -238,6 +245,44 @@ public:
         }
     }
 
+
+
+    // Returns False when player is an empty grid
+    bool isEnemyPiece(const Players& player) {
+
+        if (isBlackPiece(player)) {
+            // Weiss ist am Zug
+            if (turn) {
+                return true;
+            }
+        }
+        else if (isWhitePiece(player)) {
+            // Schwarz ist am Zug
+            if (!turn) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    bool isEmpty(const Players& player) {
+        return player == Players::EMPTY;
+    }
+
+    // Returns True when player is a black piece
+    bool isBlackPiece(const Players& player){
+        return player >= Players::B_KING;
+    }
+
+    bool isWhitePiece(const Players& player) {
+        return player >= Players::W_KING && player < Players::B_KING;
+    }
+
+
+
+
+
     // Spielfeld umdrehen
     void turnaround() {
         // Irgendwas einfallen lassen, sodass nur die View um 180Grad gedreht wird, damit alle Berechnungen noch gleich sind
@@ -279,11 +324,13 @@ public:
 
                 calculatePossibleMoves();
 
+
             }
             else {
                 // Markiertes Feld wegmachen
                 this->clickedField = {-1, -1};
             }
+
         }
 
 
@@ -325,9 +372,15 @@ public:
 
                     auto player = static_cast<Players>(gMap[ny][nx]);
 
-                    if (player == Players::EMPTY || player >= Players::B_KING) {
+                    // Wenn Feld leer ist oder auf dem Feld eine Schwarze Figur steht
+                    if (isEmpty(player) || isBlackPiece(player)) {
+                        // Move hinzufuegen
                         possibleMoves.emplace_back(nx, ny);
                     }
+
+                    //if (player == Players::EMPTY || player >= Players::B_KING) {
+                    //    possibleMoves.emplace_back(nx, ny);
+                    //}
                 };
 
                 tryMove(0, -1);
@@ -357,9 +410,13 @@ public:
 
                     auto player = static_cast<Players>(gMap[ny][nx]);
 
-                    if (player == Players::EMPTY || (player >= Players::W_KING && player < Players::B_KING)) {
+                    if (isEmpty(player) || isWhitePiece(player)) {
                         possibleMoves.emplace_back(nx, ny);
                     }
+
+                    //if (player == Players::EMPTY || (player >= Players::W_KING && player < Players::B_KING)) {
+                    //    possibleMoves.emplace_back(nx, ny);
+                    //}
                 };
 
                 tryMove(0, -1);
@@ -391,13 +448,14 @@ public:
 
                         auto player = static_cast<Players>(gMap[ny][nx]);
 
-                        if (player == Players::EMPTY) {
+                        if (isEmpty(player)) {
                             possibleMoves.emplace_back(nx, ny);
+
                         }
-                        else if (player >= Players::W_KING && player < Players::B_KING) {
+                        else if (isWhitePiece(player)) {
                             break;
                         }
-                        else if (player >= Players::B_KING) {
+                        else if (isBlackPiece(player)) {
                             possibleMoves.emplace_back(nx, ny);
                             break;
                         }
@@ -432,13 +490,13 @@ public:
 
                         auto player = static_cast<Players>(gMap[ny][nx]);
 
-                        if (player == Players::EMPTY) {
+                        if (isEmpty(player)) {
                             possibleMoves.emplace_back(nx, ny);
                         }
-                        else if (player >= Players::B_KING) {
+                        else if (isBlackPiece(player)) {
                             break;
                         }
-                        else if (player >= Players::W_KING && player < Players::B_KING) {
+                        else if (isWhitePiece(player)) {
                             possibleMoves.emplace_back(nx, ny);
                             break;
                         }
@@ -464,14 +522,22 @@ public:
                 // While-Schleife um zu ueberpruefen, wie viele Felder frei sind
                 // Richtung nach oben
                 int nx = x, ny = y;
-                while (ny > 0){
+                while (ny >= 0){
                     nx = x;
                     ny -= 1;
-                    if ((static_cast<Players>(gMap[ny][nx]) >= Players::W_KING && static_cast<Players>(gMap[ny][nx]) < Players::B_KING) || ny < 0){
+
+                    if (nx < 0 || nx > 7 || ny < 0 || ny > 7) {
+                        break;
+                    }
+
+                    auto player = static_cast<Players>(gMap[ny][nx]);
+
+
+                    if (isWhitePiece(player) || ny < 0){
                         break;
                     }
                     possibleMoves.emplace_back(nx, ny);
-                    if (static_cast<Players>(gMap[ny][nx]) >= Players::B_KING) {
+                    if (isBlackPiece(player)) {
                         break;
                     }
                 }
@@ -479,14 +545,22 @@ public:
                 // Richtung nach unten
                 nx = x;
                 ny = y;
-                while (ny < 7){
+                while (ny <= 7){
                     nx = x;
                     ny += 1;
-                    if ((static_cast<Players>(gMap[ny][nx]) >= Players::W_KING && static_cast<Players>(gMap[ny][nx]) < Players::B_KING) || ny > 7){
+
+                    if (nx < 0 || nx > 7 || ny < 0 || ny > 7) {
+                        break;
+                    }
+
+                    auto player = static_cast<Players>(gMap[ny][nx]);
+
+
+                    if ((isWhitePiece(player)) || ny > 7){
                         break;
                     }
                     possibleMoves.emplace_back(nx, ny);
-                    if (static_cast<Players>(gMap[ny][nx]) >= Players::B_KING) {
+                    if (isBlackPiece(player)) {
                         break;
                     }
                 }
@@ -494,14 +568,22 @@ public:
                 // Richtung nach links
                 nx = x;
                 ny = y;
-                while (nx > 0){
+                while (nx >= 0){
                     nx -= 1;
                     ny = y;
-                    if ((static_cast<Players>(gMap[ny][nx]) >= Players::W_KING && static_cast<Players>(gMap[ny][nx]) < Players::B_KING) || nx < 0){
+
+                    if (nx < 0 || nx > 7 || ny < 0 || ny > 7) {
+                        break;
+                    }
+
+                    auto player = static_cast<Players>(gMap[ny][nx]);
+
+
+                    if ((isWhitePiece(player)) || nx < 0){
                         break;
                     }
                     possibleMoves.emplace_back(nx, ny);
-                    if (static_cast<Players>(gMap[ny][nx]) >= Players::B_KING) {
+                    if (isBlackPiece(player)) {
                         break;
                     }
                 }
@@ -509,14 +591,22 @@ public:
                 // Richtung nach rechts
                 nx = x;
                 ny = y;
-                while (nx > 0){
+                while (nx >= 0){
                     nx += 1;
                     ny = y;
-                    if ((static_cast<Players>(gMap[ny][nx]) >= Players::W_KING && static_cast<Players>(gMap[ny][nx]) < Players::B_KING) || nx > 7){
+
+                    if (nx < 0 || nx > 7 || ny < 0 || ny > 7) {
+                        break;
+                    }
+
+                    auto player = static_cast<Players>(gMap[ny][nx]);
+
+
+                    if ((isWhitePiece(player)) || nx > 7){
                         break;
                     }
                     possibleMoves.emplace_back(nx, ny);
-                    if (static_cast<Players>(gMap[ny][nx]) >= Players::B_KING) {
+                    if (isBlackPiece(player)) {
                         break;
                     }
                 }
@@ -529,14 +619,21 @@ public:
                 // While-Schleife um zu ueberpruefen, wie viele Felder frei sind
                 // Richtung nach oben
                 int nx = x, ny = y;
-                while (ny > 0){
+                while (ny >= 0){
                     nx = x;
                     ny -= 1;
-                    if ((static_cast<Players>(gMap[ny][nx]) >= Players::B_KING) || ny < 0){
+
+                    if (nx < 0 || nx > 7 || ny < 0 || ny > 7) {
+                        break;
+                    }
+
+                    auto player = static_cast<Players>(gMap[ny][nx]);
+
+                    if ((isBlackPiece(player)) || ny < 0){
                         break;
                     }
                     possibleMoves.emplace_back(nx, ny);
-                    if (static_cast<Players>(gMap[ny][nx]) >= Players::W_KING && static_cast<Players>(gMap[ny][nx]) < Players::B_KING) {
+                    if (isWhitePiece(player)) {
                         break;
                     }
                 }
@@ -544,14 +641,21 @@ public:
                 // Richtung nach unten
                 nx = x;
                 ny = y;
-                while (ny < 7){
+                while (ny <= 7){
                     nx = x;
                     ny += 1;
-                    if ((static_cast<Players>(gMap[ny][nx]) >= Players::B_KING) || ny > 7){
+
+                    if (nx < 0 || nx > 7 || ny < 0 || ny > 7) {
+                        break;
+                    }
+
+                    auto player = static_cast<Players>(gMap[ny][nx]);
+
+                    if ((isBlackPiece(player)) || ny > 7){
                         break;
                     }
                     possibleMoves.emplace_back(nx, ny);
-                    if (static_cast<Players>(gMap[ny][nx]) >= Players::W_KING && static_cast<Players>(gMap[ny][nx]) < Players::B_KING) {
+                    if (isWhitePiece(player)) {
                         break;
                     }
                 }
@@ -559,14 +663,21 @@ public:
                 // Richtung nach links
                 nx = x;
                 ny = y;
-                while (nx > 0){
+                while (nx >= 0){
                     nx -= 1;
                     ny = y;
-                    if ((static_cast<Players>(gMap[ny][nx]) >= Players::B_KING) || nx < 0){
+
+                    if (nx < 0 || nx > 7 || ny < 0 || ny > 7) {
+                        break;
+                    }
+
+                    auto player = static_cast<Players>(gMap[ny][nx]);
+
+                    if ((isBlackPiece(player)) || nx < 0){
                         break;
                     }
                     possibleMoves.emplace_back(nx, ny);
-                    if (static_cast<Players>(gMap[ny][nx]) >= Players::W_KING && static_cast<Players>(gMap[ny][nx]) < Players::B_KING) {
+                    if (isWhitePiece(player)) {
                         break;
                     }
                 }
@@ -574,14 +685,21 @@ public:
                 // Richtung nach rechts
                 nx = x;
                 ny = y;
-                while (nx > 0){
+                while (nx >= 0){
                     nx += 1;
                     ny = y;
-                    if ((static_cast<Players>(gMap[ny][nx]) >= Players::B_KING) || nx > 7){
+
+                    if (nx < 0 || nx > 7 || ny < 0 || ny > 7) {
+                        break;
+                    }
+
+                    auto player = static_cast<Players>(gMap[ny][nx]);
+
+                    if ((isBlackPiece(player)) || nx > 7){
                         break;
                     }
                     possibleMoves.emplace_back(nx, ny);
-                    if (static_cast<Players>(gMap[ny][nx]) >= Players::W_KING && static_cast<Players>(gMap[ny][nx]) < Players::B_KING) {
+                    if (isWhitePiece(player)) {
                         break;
                     }
                 }
@@ -606,20 +724,20 @@ public:
                             break;
                         }
 
-                        auto target = static_cast<Players>(gMap[ny][nx]);
+                        auto player = static_cast<Players>(gMap[ny][nx]);
 
                         // Weiss darf weiss nicht schlagen
-                        if (target >= Players::W_KING && target < Players::B_KING) {
+                        if (isWhitePiece(player)) {
                             break;
                         }
 
                         // Weiss darf Schwarz schlagen
-                        if (target >= Players::B_KING) {
+                        if (isBlackPiece(player)) {
                             possibleMoves.emplace_back(nx, ny);
                             break;
                         }
                         // Leeres Feld ist begehbar
-                        if (target == Players::EMPTY) {
+                        if (isEmpty(player)) {
                             possibleMoves.emplace_back(nx, ny);
                         }
 
@@ -652,19 +770,19 @@ public:
                             break;
                         }
 
-                        auto target = static_cast<Players>(gMap[ny][nx]);
+                        auto player = static_cast<Players>(gMap[ny][nx]);
 
                         // Schwarz darf schwarz nicht schlagen
-                        if (target >= Players::W_KING && target >= Players::B_KING) {
+                        if (isBlackPiece(player)) {
                             break;
                         }
                         // Schwarz darf weiss schlagen
-                        if (target >= Players::W_KING && target < Players::B_KING) {
+                        if (isWhitePiece(player)) {
                             possibleMoves.emplace_back(nx, ny);
                             break;
                         }
                         // Leeres Feld ist begehbar
-                        if (target == Players::EMPTY) {
+                        if (isEmpty(player)) {
                             possibleMoves.emplace_back(nx, ny);
                         }
 
@@ -687,8 +805,8 @@ public:
 
                 auto tryMove = [&](int tx, int ty) {
                     if (tx >= 0 && tx < 8 && ty >= 0 && ty < 8) {
-                        auto target = static_cast<Players>(gMap[ty][tx]);
-                        if (target == Players::EMPTY || target >= Players::B_KING) {
+                        auto player = static_cast<Players>(gMap[ty][tx]);
+                        if (isEmpty(player) || isBlackPiece(player)) {
                             possibleMoves.emplace_back(tx, ty);
                         }
                     }
@@ -714,8 +832,8 @@ public:
 
                 auto tryMove = [&](int tx, int ty) {
                     if (tx >= 0 && tx < 8 && ty >= 0 && ty < 8) {
-                        auto target = static_cast<Players>(gMap[ty][tx]);
-                        if (target == Players::EMPTY || (target >= Players::W_KING && target < Players::B_KING)) {
+                        auto player = static_cast<Players>(gMap[ty][tx]);
+                        if (isEmpty(player) || (isWhitePiece(player))) {
                             possibleMoves.emplace_back(tx, ty);
                         }
                     }
@@ -737,25 +855,32 @@ public:
                 // gMap[y][x] ueberpruefen, ob die jeweiligen Felder zum spielen frei sind (0)
                 std::cout << "W Pawn" << std::endl;
                 if (y > 0) {
-                    if (static_cast<Players>(gMap[y-1][x]) == Players::EMPTY) {
+                    // Wenn Feld frei ist
+                    if (isEmpty(static_cast<Players>(gMap[y-1][x]))) {
                         std::cout << "Feld frei" << std::endl;
                         possibleMoves.emplace_back(x, y-1);
                         // y == 6 => Weisser Bauer ist noch auf seiner Startlinie
-                        if (y == 6) {
+                        if (y == 6 && !isWhitePiece(static_cast<Players>(gMap[y-2][x]))) {
                             possibleMoves.emplace_back(x, y-2);
                         }
                     }
-                    if (x > 0 && static_cast<Players>(gMap[y-1][x-1]) != Players::EMPTY) {
-                        if (static_cast<Players>(gMap[y-1][x-1]) >= Players::W_KING && static_cast<Players>(gMap[y-1][x-1]) < Players::B_KING){
+                    // Wenn das Feld links oben links nicht leer ist
+                    if (x > 0 && !isEmpty(static_cast<Players>(gMap[y-1][x-1]))) {
+                        // Wenn auf dem Feld eine weisse Schachfigur ist
+                        if (isWhitePiece(static_cast<Players>(gMap[y-1][x-1]))){
 
                         }
+                        // Wenn auf dem Feld eine schwarze Schachfigur ist
                         else {
                             possibleMoves.emplace_back(x-1, y-1);
                         }
                     }
-                    if (x < 7 && static_cast<Players>(gMap[y-1][x+1]) != Players::EMPTY) {
-                        if (static_cast<Players>(gMap[y-1][x+1]) >= Players::W_KING && static_cast<Players>(gMap[y-1][x+1]) < Players::B_KING){
+                    // Wenn das Feld oben rechts nicht leer ist
+                    if (x < 7 && !isEmpty(static_cast<Players>(gMap[y-1][x+1]))) {
+                        // Wenn auf dem Feld eine weisse Schachfigur ist
+                        if (isWhitePiece(player)){
                         }
+                        // Wenn auf dem Feld eine schwarze Schachfigur ist
                         else {
                             possibleMoves.emplace_back(x+1, y-1);
                         }
@@ -767,27 +892,27 @@ public:
                 // gMap[y][x] ueberpruefen, ob die jeweiligen Felder zum spielen frei sind (0)
                 std::cout << "B Pawn" << std::endl;
                 if (y < 7) {
-                    if (static_cast<Players>(gMap[y+1][x]) == Players::EMPTY) {
+                    if (isEmpty(static_cast<Players>(gMap[y+1][x]))) {
                         std::cout << "Feld frei" << std::endl;
                         possibleMoves.emplace_back(x, y+1);
                         // y == 6 => Weisser Bauer ist noch auf seiner Startlinie
-                        if (y == 1) {
+                        if (y == 1 && !isBlackPiece(static_cast<Players>(gMap[y+2][x]))) {
                             possibleMoves.emplace_back(x, y+2);
                         }
                     }
                     // Richtung unten links
                     // Wenn unten links ein Spieler ist
-                    if (x > 0 && static_cast<Players>(gMap[y+1][x-1]) != Players::EMPTY) {
+                    if (x > 0 && !isEmpty(static_cast<Players>(gMap[y+1][x-1]))) {
                         // Wenn die Figur unten links Schwarz ist, dann soll nichts gemacht werden
-                        if (static_cast<Players>(gMap[y+1][x-1]) >= Players::B_KING){
+                        if (isBlackPiece(static_cast<Players>(gMap[y+1][x-1]))){
                         }
                         // Wenn der Spieler unten links ein Weisser ist
                         else {
                             possibleMoves.emplace_back(x-1, y+1);
                         }
                     }
-                    if (x < 7 && static_cast<Players>(gMap[y+1][x+1]) != Players::EMPTY) {
-                        if (static_cast<Players>(gMap[y+1][x+1]) >= Players::B_KING){
+                    if (x < 7 && !isEmpty(static_cast<Players>(gMap[y+1][x+1]))) {
+                        if (isBlackPiece(static_cast<Players>(gMap[y+1][x+1]))){
                         }
                         else {
                             possibleMoves.emplace_back(x+1, y+1);
