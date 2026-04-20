@@ -324,8 +324,8 @@ public:
                     bool found = false;
                     for (auto& move : possibleMoves) {
                         if (move.first == x && move.second == y) {
-                            std::cout << "---\nclicked possible move\n---" << std::endl;
-
+                            // Hier wird die Figur bewegt
+                            std::cout << "---\nmoved figure\n---" << std::endl;
 
                             found = true;
 
@@ -337,6 +337,11 @@ public:
 
                             // Markierung nach erfolgreichem Zug wegmachen
                             this->clickedField = {-1, -1};
+
+                            // Spielerwechsel
+                            turn = !turn;
+
+
                         }
                     }
 
@@ -382,9 +387,23 @@ public:
             return;
         }
 
+
         this->possibleMoves.clear();
 
         auto player = static_cast<Players>(gMap[y][x]);
+
+        // Weiss ist am Zug
+        if (turn && isBlackPiece(player)) {
+            // Weiss kann nur weiss bedienen
+            return;
+        }
+
+        // Schwarz ist am Zug
+        if (!turn && isWhitePiece(player)) {
+            // Schwarz kann nur schwarz bedienen
+            return;
+        }
+
 
         // Aufgrund des ermittelten Spielers, muessen die jeweiligen Move-Regeln herangezogen werden
 
@@ -894,7 +913,7 @@ public:
                         std::cout << "Feld frei" << std::endl;
                         possibleMoves.emplace_back(x, y-1);
                         // y == 6 => Weisser Bauer ist noch auf seiner Startlinie
-                        if (y == 6 && !isWhitePiece(static_cast<Players>(gMap[y-2][x]))) {
+                        if (y == 6 && isEmpty(static_cast<Players>(gMap[y-2][x]))) {
                             possibleMoves.emplace_back(x, y-2);
                         }
                     }
@@ -930,7 +949,7 @@ public:
                         std::cout << "Feld frei" << std::endl;
                         possibleMoves.emplace_back(x, y+1);
                         // y == 6 => Weisser Bauer ist noch auf seiner Startlinie
-                        if (y == 1 && !isBlackPiece(static_cast<Players>(gMap[y+2][x]))) {
+                        if (y == 1 && isEmpty(static_cast<Players>(gMap[y+2][x]))) {
                             possibleMoves.emplace_back(x, y+2);
                         }
                     }
