@@ -57,8 +57,8 @@ private:
         {9 ,11,10,8 ,7 ,10,11,9},
         {12 ,12 ,12 ,12 ,12 ,12 ,12 ,12},
         {0 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
-        {9 ,0,10,8 ,7 ,10,0,9},
-        {0 ,0 ,0 ,0 ,9 ,0 ,0 ,0},
+        {0 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
+        {0 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
         {0 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
         {6 ,6 ,6 ,6 ,6 ,6 ,6 ,6},
         {3 ,5 ,4 ,2 ,1 ,4 ,5 ,3},
@@ -298,7 +298,7 @@ public:
 
         if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
             Vector2 mousePos = GetMousePosition();
-            // Maus hat aufs Spielfeld gedrueckt
+            // Maus hat aufs Spielfeld geklickt
             if (mousePos.x > fieldX && mousePos.x < (fieldX + fieldlength)
                 && mousePos.y > fieldY && mousePos.y < (fieldY + fieldlength)) {
                 std::cout << "Mouse clicked on field" << std::endl;
@@ -312,13 +312,46 @@ public:
 
                 std::cout << "x: " << x << " y: " << y << std::endl;
 
-
+                // Wenn das angeklickte Feld, schon angeklickt war, dann wird die Markierung weggemacht
                 if (this->clickedField.first == x && this->clickedField.second == y) {
                     this->clickedField = {-1, -1};
+                    std::cout << "---\nclicked field already clicked\n---" << std::endl;
                 }
+
+                // Wenn schon ein Feld markiert ist (ungleich -1,-1),
+                else if (this->clickedField.first != -1 && this->clickedField.second != -1) {
+                    // und das neu angeklickte Feld Teil von possibleMoves ist (dunkelrote Bloecke)
+                    bool found = false;
+                    for (auto& move : possibleMoves) {
+                        if (move.first == x && move.second == y) {
+                            std::cout << "---\nclicked possible move\n---" << std::endl;
+
+
+                            found = true;
+
+                            // Endposition wird auf die Spielerindex gesetzt
+                            gMap[move.second][move.first] = static_cast<int>(gMap[clickedField.second][clickedField.first]);
+
+                            // Ursprungsposition wird auf 0 gesetzt (EMPTY)
+                            gMap[clickedField.second][clickedField.first] = static_cast<int>(Players::EMPTY);
+
+                            // Markierung nach erfolgreichem Zug wegmachen
+                            this->clickedField = {-1, -1};
+                        }
+                    }
+
+                    // Wenn kein possibleMove angeklickt wurde, dann wird stattdessen ein neues Feld markiert
+                    if (found == false) {
+                        this->clickedField = {x, y};
+                        std::cout << "---\nclicked new field2\n---" << std::endl;
+                    }
+                }
+
+                // Wenn Feld geklickt wurde, und davor war noch keins markiert
                 else {
-                    // Feld speichern
+                    // Neues angeklicktes Feld
                     this->clickedField = {x, y};
+                    std::cout << "---\nclicked new field\n---" << std::endl;
                 }
 
 
@@ -326,6 +359,7 @@ public:
 
 
             }
+            // Maus hat nicht auf das Spielfeld geklickt
             else {
                 // Markiertes Feld wegmachen
                 this->clickedField = {-1, -1};
@@ -878,7 +912,7 @@ public:
                     // Wenn das Feld oben rechts nicht leer ist
                     if (x < 7 && !isEmpty(static_cast<Players>(gMap[y-1][x+1]))) {
                         // Wenn auf dem Feld eine weisse Schachfigur ist
-                        if (isWhitePiece(player)){
+                        if (isWhitePiece(static_cast<Players>(gMap[y-1][x+1]))){
                         }
                         // Wenn auf dem Feld eine schwarze Schachfigur ist
                         else {
