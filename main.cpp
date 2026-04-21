@@ -89,6 +89,18 @@ private:
 
     std::vector<Players> lostBlackPieces{};
     std::vector<Players> lostWhitePieces{};
+    std::vector<Players> allPieces{Players::W_KING, Players::W_QUEEN, Players::W_ROOK, Players::W_BISHOP,
+        Players::W_KNIGHT, Players::W_PAWN, Players::B_KING, Players::B_QUEEN, Players::B_ROOK, Players::B_BISHOP,
+        Players::B_KNIGHT, Players::B_PAWN};
+
+    // Fuer Choose
+    std::vector<Players> allWhitePieces{Players::W_KING, Players::W_QUEEN, Players::W_ROOK, Players::W_BISHOP,
+        Players::W_KNIGHT};
+
+    std::vector<Players> allBlackPieces{Players::B_KING, Players::B_QUEEN, Players::B_ROOK, Players::B_BISHOP,
+        Players::B_KNIGHT};
+
+    std::pair<int, int> lastMove = {-1, -1};
 
 public:
 
@@ -125,6 +137,115 @@ public:
         UnloadTexture(pieceSpritesheet);
     }
 
+    bool mouseCollision(Vector2 mousePos, Rectangle rec){
+
+        if (mousePos.x >= rec.x && mousePos.x <= (rec.x + rec.width) &&
+            mousePos.y >= rec.y && mousePos.y <= (rec.y + rec.height)) \
+        {
+            return true;
+        }
+        return false;
+    }
+
+    void loop() {
+        if (gameMode != GameMode::CHOOSE_MODE) {
+            update();
+        }
+        else {
+            // Wenn die Maus eine Figur ausgewaehlt hat
+            if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                Vector2 mousePos = GetMousePosition();
+                std::cout << "test" << std::endl;
+                //Hier irgendwie dann die Figuren aus der Liste auswaehlen koennen
+                //Auflistung ist so:
+
+                // Die fontSize 30 ist die hoehe von den Feldern
+                int fontSize = 30;
+                int xPos = this->fieldX + 10;
+                int yPos = this->fieldY + 10 + 40 + fontSize;
+
+                for (int i = 0; i < 5; i++) {
+                    Rectangle rec(xPos, yPos, 100, fontSize);
+                    if (mouseCollision(mousePos, rec)) {
+                        std::cout << "mouseCollision" << std::endl;
+                        std::cout << "i = " << i << std::endl;
+
+                        switch (i) {
+                            case 0:
+                                std::cout << "KING" << std::endl;
+
+                                if (!turn) {
+                                    gMap[lastMove.second][lastMove.first] = static_cast<int>(Players::W_KING);
+                                }
+                                else {
+                                    gMap[lastMove.second][lastMove.first] = static_cast<int>(Players::B_KING);
+                                }
+
+                                break;
+                            case 1:
+                                std::cout << "QUEEN" << std::endl;
+
+                                if (!turn) {
+                                    gMap[lastMove.second][lastMove.first] = static_cast<int>(Players::W_QUEEN);
+                                }
+                                else {
+                                    gMap[lastMove.second][lastMove.first] = static_cast<int>(Players::B_QUEEN);
+                                }
+                                break;
+                            case 2:
+                                std::cout << "ROOK" << std::endl;
+
+                                if (!turn) {
+                                    gMap[lastMove.second][lastMove.first] = static_cast<int>(Players::W_ROOK);
+                                }
+                                else {
+                                    gMap[lastMove.second][lastMove.first] = static_cast<int>(Players::B_ROOK);
+                                }
+                                break;
+                            case 3:
+                                std::cout << "BISHOP" << std::endl;
+
+                                if (!turn) {
+                                    gMap[lastMove.second][lastMove.first] = static_cast<int>(Players::W_BISHOP);
+                                }
+                                else {
+                                    gMap[lastMove.second][lastMove.first] = static_cast<int>(Players::B_BISHOP);
+                                }
+
+                                break;
+                            case 4:
+                                std::cout << "KNIGHT" << std::endl;
+
+                                if (!turn) {
+                                    gMap[lastMove.second][lastMove.first] = static_cast<int>(Players::W_KNIGHT);
+                                }
+                                else {
+                                    gMap[lastMove.second][lastMove.first] = static_cast<int>(Players::B_KNIGHT);
+                                }
+                                break;
+
+                        }
+
+                        // i == 0 -> KING
+                        // i == 1 -> QUEEN
+                        // i == 2 -> ROOK
+                        // i == 3 -> BISHOP
+                        // i == 4 -> KNIGHT
+
+                        gameMode = GameMode::PLAY;
+
+                    }
+
+                    yPos += fontSize;
+                }
+
+
+            }
+
+        }
+        draw();
+    }
+
     // Spiel zeichnen
     void draw() {
         drawField();
@@ -151,19 +272,22 @@ public:
     }
 
     void drawChooseField() {
+
+
         DrawRectangleRec(field, {12, 96, 232,200});
 
         DrawText("Waehle eine Figur:", this->fieldX + 10, this->fieldY + 13, 30, BLACK);
-        DrawText("Waehle eine Figur:", this->fieldX + 10, this->fieldY + 10, 30, WHITE);
+        DrawText("Waehle eine Figur:", this->fieldX + 10, this->fieldY + 10, 30, RED);
 
         // Weiss ist am Zug
-        if (turn) {
-            drawFiguresLost(lostWhitePieces, 0, this->fieldX + 10, 30, 1, this->fieldY + 10 + 40);
+        if (!turn) {
+            drawFiguresLost(allWhitePieces, 0, this->fieldX + 10, 30, 1, this->fieldY + 10 + 40);
         }
         else {
-            drawFiguresLost(lostBlackPieces, this->fieldX + 10, 0, 30, 1, this->fieldY + 10 + 40);
+            drawFiguresLost(allBlackPieces, this->fieldX + 10, 0, 30, 1, this->fieldY + 10 + 40);
 
         }
+
 
 
     }
@@ -172,62 +296,62 @@ public:
         for (auto& var : vect) {
             switch (var) {
                 case Players::B_KING:
-                    std::cout << "B_KING" << std::endl;
+                    //std::cout << "B_KING" << std::endl;
                     DrawText("B_KING", blackXoff, yOff + fontSize * offset, fontSize, BLACK);
                     offset++;
                     break;
                 case Players::B_QUEEN:
-                    std::cout << "B_QUEEN" << std::endl;
+                    //std::cout << "B_QUEEN" << std::endl;
                     DrawText("B_QUEEN", blackXoff, yOff + fontSize * offset, fontSize, BLACK);
                     offset++;
                     break;
                 case Players::B_ROOK:
-                    std::cout << "B_ROOK" << std::endl;
+                    //std::cout << "B_ROOK" << std::endl;
                     DrawText("B_ROOK", blackXoff, yOff + fontSize * offset, fontSize, BLACK);
                     offset++;
                     break;
                 case Players::B_BISHOP:
-                    std::cout << "B_BISHOP" << std::endl;
+                    //std::cout << "B_BISHOP" << std::endl;
                     DrawText("B_BISHOP", blackXoff, yOff + fontSize * offset, fontSize, BLACK);
                     offset++;
                     break;
                 case Players::B_KNIGHT:
-                    std::cout << "B_KNIGHT" << std::endl;
+                    //std::cout << "B_KNIGHT" << std::endl;
                     DrawText("B_KNIGHT", blackXoff, yOff + fontSize * offset, fontSize, BLACK);
                     offset++;
                     break;
                 case Players::B_PAWN:
-                    std::cout << "B_PAWN" << std::endl;
+                    //std::cout << "B_PAWN" << std::endl;
                     DrawText("B_PAWN", blackXoff, yOff + fontSize * offset, fontSize, BLACK);
                     offset++;
                     break;
                 case Players::W_KING:
-                    std::cout << "W_KING" << std::endl;
+                    //std::cout << "W_KING" << std::endl;
                     DrawText("W_KING", whiteXoff, yOff + fontSize * offset, fontSize, WHITE);
                     offset++;
                     break;
                 case Players::W_QUEEN:
-                    std::cout << "W_QUEEN" << std::endl;
+                    //std::cout << "W_QUEEN" << std::endl;
                     DrawText("W_QUEEN", whiteXoff, yOff + fontSize * offset, fontSize, WHITE);
                     offset++;
                     break;
                 case Players::W_ROOK:
-                    std::cout << "W_ROOK" << std::endl;
+                    //std::cout << "W_ROOK" << std::endl;
                     DrawText("W_ROOK", whiteXoff, yOff + fontSize * offset, fontSize, WHITE);
                     offset++;
                     break;
                 case Players::W_BISHOP:
-                    std::cout << "W_BISHOP" << std::endl;
+                    //std::cout << "W_BISHOP" << std::endl;
                     DrawText("W_BISHOP", whiteXoff, yOff + fontSize * offset, fontSize, WHITE);
                     offset++;
                     break;
                 case Players::W_KNIGHT:
-                    std::cout << "W_KNIGHT" << std::endl;
+                    //std::cout << "W_KNIGHT" << std::endl;
                     DrawText("W_KNIGHT", whiteXoff, yOff + fontSize * offset, fontSize, WHITE);
                     offset++;
                     break;
                 case Players::W_PAWN:
-                    std::cout << "W_PAWN" << std::endl;
+                    //std::cout << "W_PAWN" << std::endl;
                     DrawText("W_PAWN", whiteXoff, yOff + fontSize * offset, fontSize, WHITE);
                     offset++;
                     break;
@@ -460,18 +584,6 @@ public:
         // Bei Players::EMPTY soll eine andere Farbe angezeigt werden als bei Players::wasAnderes
 
 
-        // Soll nicht mit Space aufgerufen werden, sondern wenn der Bauer auf der anderen Seite ist
-        if (IsKeyPressed(KEY_SPACE)) {
-            if (gameMode == GameMode::CHOOSE_MODE) {
-                gameMode = GameMode::PLAY;
-            }
-            else if (gameMode == GameMode::PLAY) {
-                gameMode = GameMode::CHOOSE_MODE;
-            }
-            return;
-        }
-
-
         if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
             Vector2 mousePos = GetMousePosition();
 
@@ -535,11 +647,23 @@ public:
                             // Markierung nach erfolgreichem Zug wegmachen
                             this->clickedField = {-1, -1};
 
+                            // Letzten Zug merken
+                            lastMove.first = move.first;
+                            lastMove.second = move.second;
+
+
+                            // Wenn auf der obersten Linie ein weisser Bauer steht, dann soll das Fenster aufgerufen werden
+                            // Das gleiche gilt fuer den schwarzen Bauern auf der untersten Linie
+
+                            for (int i = 0; i < 8; i++) {
+                                if (gMap[0][i] == static_cast<int>(Players::W_PAWN) || gMap[7][i] == static_cast<int>(Players::B_PAWN)) {
+                                    gameMode = GameMode::CHOOSE_MODE;
+                                }
+                            }
+
+
                             // Spielerwechsel
                             turn = !turn;
-
-
-
 
                         }
                     }
@@ -570,6 +694,7 @@ public:
             }
 
         }
+
 
 
     }
@@ -1222,8 +1347,7 @@ int main() {
 
         BeginMode2D(cam);
 
-        game.update();
-        game.draw();
+        game.loop();
 
         EndMode2D();
 
