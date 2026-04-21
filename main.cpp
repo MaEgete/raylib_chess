@@ -23,6 +23,18 @@ private:
 
     Rectangle field;
 
+    int restartX;
+    int restartY;
+    int restartW;
+    int restartH;
+
+    enum class GameMode {
+        PLAY,
+        CHOOSE_MODE,
+    };
+
+    GameMode gameMode = GameMode::PLAY;
+
     enum class Players : int{
         EMPTY = 0,  // Leeres Feld = 0
         W_KING = 1,   // W König = 1
@@ -75,6 +87,8 @@ private:
     // false == schwarz ist am Zug
     bool turn = true;
 
+    std::vector<Players> lostBlackPieces{};
+    std::vector<Players> lostWhitePieces{};
 
 public:
 
@@ -86,6 +100,11 @@ public:
         fieldY = midY - (fieldlength / 2);
 
         field = Rectangle{static_cast<float>(fieldX), static_cast<float>(fieldY), static_cast<float>(fieldlength), static_cast<float>(fieldlength)};
+
+        restartX = this->fieldX + fieldlength/4;
+        restartY = this->fieldY + fieldlength + 20;
+        restartW = fieldlength/2;
+        restartH = 150;
 
         pieceSpritesheet = LoadTexture("../images/chesspieces.png");
 
@@ -112,6 +131,19 @@ public:
         drawClickedField();
         drawFigures();
         drawText();
+        drawLostFigures();
+
+        if (gameMode == GameMode::CHOOSE_MODE) {
+            drawChooseField();
+        }
+
+        DrawText("Schachmatt!", this->fieldX, this->fieldY - 100, 100, WHITE);
+
+
+
+        DrawRectangle(restartX, restartY, restartW, restartH, WHITE);
+        DrawRectangleLines(restartX+10, restartY + 10, restartW - 20, restartH - 20, BLACK);
+        DrawText("Restart!", this->midX - 100, this->fieldY + fieldlength + 20 + 50, 50, BLACK);
     }
 
     // Regeln
@@ -119,8 +151,110 @@ public:
         moveFigure();
     }
 
+    void drawChooseField() {
+        DrawRectangleRec(field, {206,130,64,200});
+
+        DrawText("Waehle eine Figur:", this->fieldX + 10, this->fieldY + 13, 30, BLACK);
+        DrawText("Waehle eine Figur:", this->fieldX + 10, this->fieldY + 10, 30, WHITE);
+
+
+    }
+
+    void drawFigures(std::vector<Players>& vect, int blackXoff = 0, int whiteXoff = 0, int fontSize = 30, int offset = 1) {
+        for (auto& var : vect) {
+            switch (var) {
+                case Players::B_KING:
+                    std::cout << "B_KING" << std::endl;
+                    DrawText("B_KING", blackXoff, this->fieldY + fontSize * offset, fontSize, BLACK);
+                    offset++;
+                    break;
+                case Players::B_QUEEN:
+                    std::cout << "B_QUEEN" << std::endl;
+                    DrawText("B_QUEEN", blackXoff, this->fieldY + fontSize * offset, fontSize, BLACK);
+                    offset++;
+                    break;
+                case Players::B_ROOK:
+                    std::cout << "B_ROOK" << std::endl;
+                    DrawText("B_ROOK", blackXoff, this->fieldY + fontSize * offset, fontSize, BLACK);
+                    offset++;
+                    break;
+                case Players::B_BISHOP:
+                    std::cout << "B_BISHOP" << std::endl;
+                    DrawText("B_BISHOP", blackXoff, this->fieldY + fontSize * offset, fontSize, BLACK);
+                    offset++;
+                    break;
+                case Players::B_KNIGHT:
+                    std::cout << "B_KNIGHT" << std::endl;
+                    DrawText("B_KNIGHT", blackXoff, this->fieldY + fontSize * offset, fontSize, BLACK);
+                    offset++;
+                    break;
+                case Players::B_PAWN:
+                    std::cout << "B_PAWN" << std::endl;
+                    DrawText("B_PAWN", blackXoff, this->fieldY + fontSize * offset, fontSize, BLACK);
+                    offset++;
+                    break;
+                case Players::W_KING:
+                    std::cout << "W_KING" << std::endl;
+                    DrawText("W_KING", whiteXoff, this->fieldY + fontSize * offset, fontSize, WHITE);
+                    offset++;
+                    break;
+                case Players::W_QUEEN:
+                    std::cout << "W_QUEEN" << std::endl;
+                    DrawText("W_QUEEN", whiteXoff, this->fieldY + fontSize * offset, fontSize, WHITE);
+                    offset++;
+                    break;
+                case Players::W_ROOK:
+                    std::cout << "W_ROOK" << std::endl;
+                    DrawText("W_ROOK", whiteXoff, this->fieldY + fontSize * offset, fontSize, WHITE);
+                    offset++;
+                    break;
+                case Players::W_BISHOP:
+                    std::cout << "W_BISHOP" << std::endl;
+                    DrawText("W_BISHOP", whiteXoff, this->fieldY + fontSize * offset, fontSize, WHITE);
+                    offset++;
+                    break;
+                case Players::W_KNIGHT:
+                    std::cout << "W_KNIGHT" << std::endl;
+                    DrawText("W_KNIGHT", whiteXoff, this->fieldY + fontSize * offset, fontSize, WHITE);
+                    offset++;
+                    break;
+                case Players::W_PAWN:
+                    std::cout << "W_PAWN" << std::endl;
+                    DrawText("W_PAWN", whiteXoff, this->fieldY + fontSize * offset, fontSize, WHITE);
+                    offset++;
+                    break;
+            }
+        }
+    }
+
+    //Wenn nur noch ein Spieler auf dem Feld ist und dieser keinen PossibleMove hat, dann Schachmatt!
+
+    void drawLostFigures() {
+
+
+        // Schwarze Figuren
+        int fontSize = 30;
+        DrawText("Verluste von Schwarz:", 10, this->fieldY - fontSize, fontSize, BLACK);
+
+        int blackXoff = 10;
+
+        int offset = 1;
+
+        drawFigures(lostBlackPieces, blackXoff, 0, fontSize, offset);
+
+        int whiteXoff = this->fieldX + this->fieldlength + 30;
+
+        DrawText("Verluste von Weiss:", whiteXoff, this->fieldY - fontSize, fontSize, WHITE);
+
+        drawFigures(lostWhitePieces, 0, whiteXoff, fontSize, offset);
+
+
+    }
+
+
+
     void drawText() const {
-        DrawText(TextFormat("%s to move", (this->turn ? "White" : "Black"), 20), 10, 10, 20, WHITE);
+        DrawText(TextFormat("%s to move", (this->turn ? "White" : "Black"), 20), 10, 10, 40, (this->turn ? WHITE : BLACK));
     }
 
     // Spielfeld zeichnen
@@ -280,7 +414,28 @@ public:
     }
 
 
+    void restart() {
 
+         int tmp[8][8] = {
+            {9 ,11,10,8 ,7 ,10,11,9},
+            {12 ,12 ,12 ,12 ,12 ,12 ,12 ,12},
+            {0 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
+            {0 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
+            {0 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
+            {0 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
+            {6 ,6 ,6 ,6 ,6 ,6 ,6 ,6},
+            {3 ,5 ,4 ,2 ,1 ,4 ,5 ,3},
+        };
+
+        memcpy(gMap, tmp, sizeof(tmp));
+        // Weiss ist am Zug
+        turn = true;
+
+        // Reset
+        lostBlackPieces.clear();
+        lostWhitePieces.clear();
+
+    }
 
 
     // Spielfeld umdrehen
@@ -296,8 +451,29 @@ public:
         // Erreichbare Felder haben entweder den Zustand Players::EMPTY oder Players::wasAnderes
         // Bei Players::EMPTY soll eine andere Farbe angezeigt werden als bei Players::wasAnderes
 
+        if (IsKeyPressed(KEY_SPACE)) {
+            if (gameMode == GameMode::CHOOSE_MODE) {
+                gameMode = GameMode::PLAY;
+            }
+            else if (gameMode == GameMode::PLAY) {
+                gameMode = GameMode::CHOOSE_MODE;
+            }
+            return;
+        }
+
+
         if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
             Vector2 mousePos = GetMousePosition();
+
+            // Maus hat auf Restart geklickt
+            if (mousePos.x >= restartX && mousePos.x <= (restartX + restartW)
+                && mousePos.y >= restartY && mousePos.y <= (restartY + restartH)) {
+
+                std::cout << "Restart" << std::endl;
+                restart();
+            }
+
+
             // Maus hat aufs Spielfeld geklickt
             if (mousePos.x > fieldX && mousePos.x < (fieldX + fieldlength)
                 && mousePos.y > fieldY && mousePos.y < (fieldY + fieldlength)) {
@@ -327,10 +503,21 @@ public:
                             // Hier wird die Figur bewegt
                             std::cout << "---\nmoved figure\n---" << std::endl;
 
+                            if (!isEmpty(static_cast<Players>(gMap[move.second][move.first]))) {
+                                if (turn) {
+                                    std::cout << "---\nBlack lost a figure\n---" << std::endl;
+                                    lostBlackPieces.emplace_back(static_cast<Players>(gMap[move.second][move.first]));
+                                }
+                                else {
+                                    std::cout << "---\nWhite lost a figure\n---" << std::endl;
+                                    lostWhitePieces.emplace_back(static_cast<Players>(gMap[move.second][move.first]));
+                                }
+                            }
+
                             found = true;
 
                             // Endposition wird auf die Spielerindex gesetzt
-                            gMap[move.second][move.first] = static_cast<int>(gMap[clickedField.second][clickedField.first]);
+                            gMap[move.second][move.first] = gMap[clickedField.second][clickedField.first];
 
                             // Ursprungsposition wird auf 0 gesetzt (EMPTY)
                             gMap[clickedField.second][clickedField.first] = static_cast<int>(Players::EMPTY);
@@ -340,6 +527,8 @@ public:
 
                             // Spielerwechsel
                             turn = !turn;
+
+
 
 
                         }
@@ -1001,7 +1190,7 @@ public:
 
 int main() {
 
-    const int screenW = 1200;
+    const int screenW = 1400;
     const int screenH = 1000;
 
     InitWindow(screenW, screenH, "chess");
