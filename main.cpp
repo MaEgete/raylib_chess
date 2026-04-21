@@ -137,9 +137,8 @@ public:
             drawChooseField();
         }
 
+
         DrawText("Schachmatt!", this->fieldX, this->fieldY - 100, 100, WHITE);
-
-
 
         DrawRectangle(restartX, restartY, restartW, restartH, WHITE);
         DrawRectangleLines(restartX+10, restartY + 10, restartW - 20, restartH - 20, BLACK);
@@ -152,75 +151,84 @@ public:
     }
 
     void drawChooseField() {
-        DrawRectangleRec(field, {206,130,64,200});
+        DrawRectangleRec(field, {12, 96, 232,200});
 
         DrawText("Waehle eine Figur:", this->fieldX + 10, this->fieldY + 13, 30, BLACK);
         DrawText("Waehle eine Figur:", this->fieldX + 10, this->fieldY + 10, 30, WHITE);
 
+        // Weiss ist am Zug
+        if (turn) {
+            drawFiguresLost(lostWhitePieces, 0, this->fieldX + 10, 30, 1, this->fieldY + 10 + 40);
+        }
+        else {
+            drawFiguresLost(lostBlackPieces, this->fieldX + 10, 0, 30, 1, this->fieldY + 10 + 40);
+
+        }
+
 
     }
 
-    void drawFigures(std::vector<Players>& vect, int blackXoff = 0, int whiteXoff = 0, int fontSize = 30, int offset = 1) {
+    void drawFiguresLost(std::vector<Players>& vect, int blackXoff = 0, int whiteXoff = 0, int fontSize = 30, int offset = 1, int yOff = 0) {
         for (auto& var : vect) {
             switch (var) {
                 case Players::B_KING:
                     std::cout << "B_KING" << std::endl;
-                    DrawText("B_KING", blackXoff, this->fieldY + fontSize * offset, fontSize, BLACK);
+                    DrawText("B_KING", blackXoff, yOff + fontSize * offset, fontSize, BLACK);
                     offset++;
                     break;
                 case Players::B_QUEEN:
                     std::cout << "B_QUEEN" << std::endl;
-                    DrawText("B_QUEEN", blackXoff, this->fieldY + fontSize * offset, fontSize, BLACK);
+                    DrawText("B_QUEEN", blackXoff, yOff + fontSize * offset, fontSize, BLACK);
                     offset++;
                     break;
                 case Players::B_ROOK:
                     std::cout << "B_ROOK" << std::endl;
-                    DrawText("B_ROOK", blackXoff, this->fieldY + fontSize * offset, fontSize, BLACK);
+                    DrawText("B_ROOK", blackXoff, yOff + fontSize * offset, fontSize, BLACK);
                     offset++;
                     break;
                 case Players::B_BISHOP:
                     std::cout << "B_BISHOP" << std::endl;
-                    DrawText("B_BISHOP", blackXoff, this->fieldY + fontSize * offset, fontSize, BLACK);
+                    DrawText("B_BISHOP", blackXoff, yOff + fontSize * offset, fontSize, BLACK);
                     offset++;
                     break;
                 case Players::B_KNIGHT:
                     std::cout << "B_KNIGHT" << std::endl;
-                    DrawText("B_KNIGHT", blackXoff, this->fieldY + fontSize * offset, fontSize, BLACK);
+                    DrawText("B_KNIGHT", blackXoff, yOff + fontSize * offset, fontSize, BLACK);
                     offset++;
                     break;
                 case Players::B_PAWN:
                     std::cout << "B_PAWN" << std::endl;
-                    DrawText("B_PAWN", blackXoff, this->fieldY + fontSize * offset, fontSize, BLACK);
+                    DrawText("B_PAWN", blackXoff, yOff + fontSize * offset, fontSize, BLACK);
                     offset++;
                     break;
                 case Players::W_KING:
                     std::cout << "W_KING" << std::endl;
-                    DrawText("W_KING", whiteXoff, this->fieldY + fontSize * offset, fontSize, WHITE);
+                    DrawText("W_KING", whiteXoff, yOff + fontSize * offset, fontSize, WHITE);
                     offset++;
                     break;
                 case Players::W_QUEEN:
                     std::cout << "W_QUEEN" << std::endl;
-                    DrawText("W_QUEEN", whiteXoff, this->fieldY + fontSize * offset, fontSize, WHITE);
+                    DrawText("W_QUEEN", whiteXoff, yOff + fontSize * offset, fontSize, WHITE);
                     offset++;
                     break;
                 case Players::W_ROOK:
                     std::cout << "W_ROOK" << std::endl;
-                    DrawText("W_ROOK", whiteXoff, this->fieldY + fontSize * offset, fontSize, WHITE);
+                    DrawText("W_ROOK", whiteXoff, yOff + fontSize * offset, fontSize, WHITE);
                     offset++;
                     break;
                 case Players::W_BISHOP:
                     std::cout << "W_BISHOP" << std::endl;
-                    DrawText("W_BISHOP", whiteXoff, this->fieldY + fontSize * offset, fontSize, WHITE);
+                    DrawText("W_BISHOP", whiteXoff, yOff + fontSize * offset, fontSize, WHITE);
                     offset++;
                     break;
                 case Players::W_KNIGHT:
                     std::cout << "W_KNIGHT" << std::endl;
-                    DrawText("W_KNIGHT", whiteXoff, this->fieldY + fontSize * offset, fontSize, WHITE);
+                    DrawText("W_KNIGHT", whiteXoff, yOff + fontSize * offset, fontSize, WHITE);
                     offset++;
                     break;
                 case Players::W_PAWN:
                     std::cout << "W_PAWN" << std::endl;
-                    DrawText("W_PAWN", whiteXoff, this->fieldY + fontSize * offset, fontSize, WHITE);
+                    DrawText("W_PAWN", whiteXoff, yOff + fontSize * offset, fontSize, WHITE);
                     offset++;
                     break;
             }
@@ -240,13 +248,13 @@ public:
 
         int offset = 1;
 
-        drawFigures(lostBlackPieces, blackXoff, 0, fontSize, offset);
+        drawFiguresLost(lostBlackPieces, blackXoff, 0, fontSize, offset,  this->fieldY);
 
         int whiteXoff = this->fieldX + this->fieldlength + 30;
 
         DrawText("Verluste von Weiss:", whiteXoff, this->fieldY - fontSize, fontSize, WHITE);
 
-        drawFigures(lostWhitePieces, 0, whiteXoff, fontSize, offset);
+        drawFiguresLost(lostWhitePieces, 0, whiteXoff, fontSize, offset,  this->fieldY);
 
 
     }
@@ -451,6 +459,8 @@ public:
         // Erreichbare Felder haben entweder den Zustand Players::EMPTY oder Players::wasAnderes
         // Bei Players::EMPTY soll eine andere Farbe angezeigt werden als bei Players::wasAnderes
 
+
+        // Soll nicht mit Space aufgerufen werden, sondern wenn der Bauer auf der anderen Seite ist
         if (IsKeyPressed(KEY_SPACE)) {
             if (gameMode == GameMode::CHOOSE_MODE) {
                 gameMode = GameMode::PLAY;
