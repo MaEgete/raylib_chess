@@ -102,6 +102,9 @@ private:
 
     std::pair<int, int> lastMove = {-1, -1};
 
+    int chooseRecW = 100;
+    int chooseRecH = 30;
+
 public:
 
     Game(int fieldlength = 600) : fieldlength{fieldlength}, blocksize{fieldlength / 8} {
@@ -160,12 +163,12 @@ public:
                 //Auflistung ist so:
 
                 // Die fontSize 30 ist die hoehe von den Feldern
-                int fontSize = 30;
+                int fontSize = this->chooseRecH;
                 int xPos = this->fieldX + 10;
                 int yPos = this->fieldY + 10 + 40 + fontSize;
 
                 for (int i = 0; i < 5; i++) {
-                    Rectangle rec(xPos, yPos, 100, fontSize);
+                    Rectangle rec(xPos, yPos, this->chooseRecW, this->chooseRecH);
                     if (mouseCollision(mousePos, rec)) {
                         std::cout << "mouseCollision" << std::endl;
                         std::cout << "i = " << i << std::endl;
@@ -273,7 +276,7 @@ public:
 
     void drawChooseField() {
 
-
+        // Blaues Feld
         DrawRectangleRec(field, {12, 96, 232,200});
 
         DrawText("Waehle eine Figur:", this->fieldX + 10, this->fieldY + 13, 30, BLACK);
@@ -281,10 +284,10 @@ public:
 
         // Weiss ist am Zug
         if (!turn) {
-            drawFiguresLost(allWhitePieces, 0, this->fieldX + 10, 30, 1, this->fieldY + 10 + 40);
+            drawFiguresLost(allWhitePieces, 0, this->fieldX + 10, 30, 1, this->fieldY + 10 + 40, true, GRAY);
         }
         else {
-            drawFiguresLost(allBlackPieces, this->fieldX + 10, 0, 30, 1, this->fieldY + 10 + 40);
+            drawFiguresLost(allBlackPieces, this->fieldX + 10, 0, 30, 1, this->fieldY + 10 + 40, true, GRAY);
 
         }
 
@@ -292,69 +295,155 @@ public:
 
     }
 
-    void drawFiguresLost(std::vector<Players>& vect, int blackXoff = 0, int whiteXoff = 0, int fontSize = 30, int offset = 1, int yOff = 0) {
+    void drawFiguresLost(std::vector<Players>& vect, int blackXoff = 0, int whiteXoff = 0, int fontSize = 30, int offset = 1, int yOff = 0, bool background = false, Color backgroundColor = GREEN) {
         for (auto& var : vect) {
             switch (var) {
-                case Players::B_KING:
+                case Players::B_KING: {
                     //std::cout << "B_KING" << std::endl;
-                    DrawText("B_KING", blackXoff, yOff + fontSize * offset, fontSize, BLACK);
+                    const char* text = "B_KING";
+                    int textWidth = MeasureText(text, fontSize);
+                    if (background) {
+                        DrawRectangle(blackXoff, yOff + fontSize * offset, textWidth, fontSize, backgroundColor);
+                    }
+
+                    DrawText(text, blackXoff, yOff + fontSize * offset, fontSize, BLACK);
                     offset++;
                     break;
-                case Players::B_QUEEN:
+                    }
+                case Players::B_QUEEN: {
                     //std::cout << "B_QUEEN" << std::endl;
-                    DrawText("B_QUEEN", blackXoff, yOff + fontSize * offset, fontSize, BLACK);
+                    const char* text = "B_QUEEN";
+                    int textWidth = MeasureText(text, fontSize);
+                    if (background) {
+                        DrawRectangle(blackXoff, yOff + fontSize * offset, textWidth, fontSize, backgroundColor);
+                    }
+
+                    DrawText(text, blackXoff, yOff + fontSize * offset, fontSize, BLACK);
                     offset++;
                     break;
-                case Players::B_ROOK:
+            }
+                case Players::B_ROOK: {
                     //std::cout << "B_ROOK" << std::endl;
-                    DrawText("B_ROOK", blackXoff, yOff + fontSize * offset, fontSize, BLACK);
+                    const char* text = "B_ROOK";
+                    int textWidth = MeasureText(text, fontSize);
+                    if (background) {
+                        DrawRectangle(blackXoff, yOff + fontSize * offset, textWidth, fontSize, backgroundColor);
+                    }
+
+                    DrawText(text, blackXoff, yOff + fontSize * offset, fontSize, BLACK);
                     offset++;
                     break;
-                case Players::B_BISHOP:
+                    }
+                case Players::B_BISHOP: {
                     //std::cout << "B_BISHOP" << std::endl;
-                    DrawText("B_BISHOP", blackXoff, yOff + fontSize * offset, fontSize, BLACK);
+                    const char* text = "B_BISHOP";
+                    int textWidth = MeasureText(text, fontSize);
+                    if (background) {
+                        DrawRectangle(blackXoff, yOff + fontSize * offset, textWidth, fontSize, backgroundColor);
+                    }
+
+                    DrawText(text, blackXoff, yOff + fontSize * offset, fontSize, BLACK);
                     offset++;
                     break;
-                case Players::B_KNIGHT:
+                    }
+                case Players::B_KNIGHT: {
                     //std::cout << "B_KNIGHT" << std::endl;
-                    DrawText("B_KNIGHT", blackXoff, yOff + fontSize * offset, fontSize, BLACK);
+                    const char* text = "B_KNIGHT";
+                    int textWidth = MeasureText(text, fontSize);
+                    if (background) {
+                        DrawRectangle(blackXoff, yOff + fontSize * offset, textWidth, fontSize, backgroundColor);
+                    }
+
+                    DrawText(text, blackXoff, yOff + fontSize * offset, fontSize, BLACK);
                     offset++;
                     break;
-                case Players::B_PAWN:
+                    }
+                case Players::B_PAWN: {
                     //std::cout << "B_PAWN" << std::endl;
-                    DrawText("B_PAWN", blackXoff, yOff + fontSize * offset, fontSize, BLACK);
+                    const char* text = "B_PAWN";
+                    int textWidth = MeasureText(text, fontSize);
+                    if (background) {
+                        DrawRectangle(blackXoff, yOff + fontSize * offset, textWidth, fontSize, backgroundColor);
+                    }
+
+                    DrawText(text, blackXoff, yOff + fontSize * offset, fontSize, BLACK);
                     offset++;
                     break;
-                case Players::W_KING:
+                    }
+                case Players::W_KING: {
                     //std::cout << "W_KING" << std::endl;
-                    DrawText("W_KING", whiteXoff, yOff + fontSize * offset, fontSize, WHITE);
+
+                    const char* text = "W_KING";
+                    int textWidth = MeasureText(text, fontSize);
+                    if (background) {
+                        DrawRectangle(whiteXoff, yOff + fontSize * offset, textWidth, fontSize, backgroundColor);
+                    }
+                    DrawText(text, whiteXoff, yOff + fontSize * offset, fontSize, WHITE);
                     offset++;
+
                     break;
-                case Players::W_QUEEN:
+                    }
+                case Players::W_QUEEN: {
                     //std::cout << "W_QUEEN" << std::endl;
-                    DrawText("W_QUEEN", whiteXoff, yOff + fontSize * offset, fontSize, WHITE);
+
+                    const char* text = "W_QUEEN";
+                    int textWidth = MeasureText(text, fontSize);
+                    if (background) {
+                        DrawRectangle(whiteXoff, yOff + fontSize * offset, textWidth, fontSize, backgroundColor);
+                    }
+
+                    DrawText(text, whiteXoff, yOff + fontSize * offset, fontSize, WHITE);
                     offset++;
                     break;
-                case Players::W_ROOK:
+                    }
+                case Players::W_ROOK: {
                     //std::cout << "W_ROOK" << std::endl;
-                    DrawText("W_ROOK", whiteXoff, yOff + fontSize * offset, fontSize, WHITE);
+                    const char* text = "W_ROOK";
+                    int textWidth = MeasureText(text, fontSize);
+                    if (background) {
+                        DrawRectangle(whiteXoff, yOff + fontSize * offset, textWidth, fontSize, backgroundColor);
+                    }
+
+                    DrawText(text, whiteXoff, yOff + fontSize * offset, fontSize, WHITE);
                     offset++;
                     break;
-                case Players::W_BISHOP:
+                    }
+                case Players::W_BISHOP: {
                     //std::cout << "W_BISHOP" << std::endl;
-                    DrawText("W_BISHOP", whiteXoff, yOff + fontSize * offset, fontSize, WHITE);
+                    const char* text = "W_BISHOP";
+                    int textWidth = MeasureText(text, fontSize);
+                    if (background) {
+                        DrawRectangle(whiteXoff, yOff + fontSize * offset, textWidth, fontSize, backgroundColor);
+                    }
+
+                    DrawText(text, whiteXoff, yOff + fontSize * offset, fontSize, WHITE);
                     offset++;
                     break;
-                case Players::W_KNIGHT:
+                    }
+                case Players::W_KNIGHT: {
                     //std::cout << "W_KNIGHT" << std::endl;
-                    DrawText("W_KNIGHT", whiteXoff, yOff + fontSize * offset, fontSize, WHITE);
+                    const char* text = "W_KNIGHT";
+                    int textWidth = MeasureText(text, fontSize);
+                    if (background) {
+                        DrawRectangle(whiteXoff, yOff + fontSize * offset, textWidth, fontSize, backgroundColor);
+                    }
+
+                    DrawText(text, whiteXoff, yOff + fontSize * offset, fontSize, WHITE);
                     offset++;
                     break;
-                case Players::W_PAWN:
+                    }
+                case Players::W_PAWN: {
                     //std::cout << "W_PAWN" << std::endl;
-                    DrawText("W_PAWN", whiteXoff, yOff + fontSize * offset, fontSize, WHITE);
+                    const char* text = "W_PAWN";
+                    int textWidth = MeasureText(text, fontSize);
+                    if (background) {
+                        DrawRectangle(whiteXoff, yOff + fontSize * offset, textWidth, fontSize, backgroundColor);
+                    }
+
+                    DrawText(text, whiteXoff, yOff + fontSize * offset, fontSize, WHITE);
                     offset++;
                     break;
+                    }
             }
         }
     }
