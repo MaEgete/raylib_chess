@@ -2,6 +2,8 @@
 #include "raylib.h"
 #include <vector>
 #include <utility>
+#include <algorithm>
+#include <ranges>
 
 class Game {
 
@@ -23,17 +25,35 @@ private:
 
     Rectangle field;
 
+    // Restart button
     int restartX;
     int restartY;
     int restartW;
     int restartH;
 
+    // PLAY = Spielen
+    // CHOOSE_MODE = Figur austauschen mit Bauer
     enum class GameMode {
         PLAY,
         CHOOSE_MODE,
+        END,
+    };
+
+    enum class Won {
+        WON_WHITE,
+        WON_BLACK,
+        NONE,
+    };
+
+    enum class Check {
+        CHECK_WHITE,CHECK_BLACK,
+        CHECK_NONE,
     };
 
     GameMode gameMode = GameMode::PLAY;
+
+    Won won = Won::NONE;
+    Check check = Check::CHECK_NONE;
 
     enum class Players : int{
         EMPTY = 0,  // Leeres Feld = 0
@@ -87,6 +107,8 @@ private:
     // false == schwarz ist am Zug
     bool turn = true;
 
+
+
     std::vector<Players> lostBlackPieces{};
     std::vector<Players> lostWhitePieces{};
     std::vector<Players> allPieces{Players::W_KING, Players::W_QUEEN, Players::W_ROOK, Players::W_BISHOP,
@@ -94,16 +116,28 @@ private:
         Players::B_KNIGHT, Players::B_PAWN};
 
     // Fuer Choose
-    std::vector<Players> allWhitePieces{Players::W_KING, Players::W_QUEEN, Players::W_ROOK, Players::W_BISHOP,
+    std::vector<Players> allWhitePieces{Players::W_QUEEN, Players::W_ROOK, Players::W_BISHOP,
         Players::W_KNIGHT};
 
-    std::vector<Players> allBlackPieces{Players::B_KING, Players::B_QUEEN, Players::B_ROOK, Players::B_BISHOP,
+    std::vector<Players> allBlackPieces{Players::B_QUEEN, Players::B_ROOK, Players::B_BISHOP,
         Players::B_KNIGHT};
 
     std::pair<int, int> lastMove = {-1, -1};
 
     int chooseRecW = 100;
     int chooseRecH = 30;
+
+    std::vector<std::pair<int, int>> allPossbileMovesFromEnemy;
+
+    std::vector<std::pair<int, int>> theoreticalMoves;
+
+    std::pair<int, int> whiteKingPosition = {-1, -1};
+    std::pair<int, int> blackKingPosition = {-1, -1};
+
+    std::vector<std::pair<int, int>> whiteKingPossibleMoves{};
+    std::vector<std::pair<int, int>> blackKingPossibleMoves{};
+
+
 
 public:
 
@@ -133,6 +167,7 @@ public:
             pieceSprites[6 + i] = Rectangle{i*tileW, tileH, tileW, tileH};
         }
 
+        whiteKingPosition = {0, 0};
 
     }
 
@@ -261,8 +296,23 @@ public:
             drawChooseField();
         }
 
+        if (this->check != Check::CHECK_NONE) {
+            if (this->check == Check::CHECK_WHITE) {
+                DrawText("Schach", this->fieldX, this->fieldY - 100, 100, WHITE);
+            }
+            if (this->check == Check::CHECK_BLACK) {
+                DrawText("Schach", this->fieldX, this->fieldY - 100, 100, BLACK);
 
-        DrawText("Schachmatt!", this->fieldX, this->fieldY - 100, 100, WHITE);
+            }
+        }
+        if (this->won != Won::NONE) {
+            if (this->won == Won::WON_WHITE) {
+                DrawText("Schachmatt!", this->fieldX, this->fieldY - 100, 100, WHITE);
+            }
+            if (this->won == Won::WON_BLACK) {
+                DrawText("Schachmatt!", this->fieldX, this->fieldY - 100, 100, BLACK);
+            }
+        }
 
         DrawRectangle(restartX, restartY, restartW, restartH, WHITE);
         DrawRectangleLines(restartX+10, restartY + 10, restartW - 20, restartH - 20, BLACK);
@@ -658,6 +708,19 @@ public:
 
     }
 
+    void updateKingPosition() {
+        for (int y = 0; y < 8; y++) {
+            for (int x = 0; x < 8; x++) {
+                if (gMap[y][x] == static_cast<int>(Players::W_KING)) {
+                    whiteKingPosition = {x, y};
+                }
+                else if (gMap[y][x] == static_cast<int>(Players::B_KING)) {
+                    blackKingPosition = {x, y};
+                }
+            }
+        }
+    }
+
 
     // Spielfeld umdrehen
     void turnaround() {
@@ -788,9 +851,38 @@ public:
 
     }
 
-    void calculatePossibleMoves() {
-        // Spieler auf dem geklickten Feld
+    bool isThreatend(int x, int y, bool byWhite) {
+        std::vector<std::pair<int, int>> enemyMoves;
 
+        for (int yy = 0; yy < 8; yy++) {
+            for (int xx = 0; xx < 8; xx++) {
+                Players p = static_cast<Players>(gMap[yy][xx]);
+
+                // Schwarz wird von Weiss bedroht
+                // und Weiss wird von schwarz bedroht
+                bool correctColor = (byWhite && isWhitePiece(p)) || (!byWhite && isBlackPiece(p));
+
+                if (!correctColor) {
+                    continue;
+                }
+
+                if (p == Players::W_PAWN || p == Players::B_PAWN) {
+                    getPawnAttackMoves(p, xx, yy, enemyMoves);
+                }
+                else {
+                    getPossibleMoves(p, xx, yy, enemyMoves);
+                }
+
+            }
+        }
+
+        return std::find(enemyMoves.begin(), enemyMoves.end(), std::make_pair(x,y)) != enemyMoves.end();
+
+    }
+
+    void calculatePossibleMoves() {
+
+        // Spieler(position) auf dem geklickten Feld
         int x = this->clickedField.first;
         int y = this->clickedField.second;
 
@@ -801,9 +893,48 @@ public:
         }
 
 
+
         this->possibleMoves.clear();
 
+        // Player
         auto player = static_cast<Players>(gMap[y][x]);
+
+        allPossbileMovesFromEnemy.clear();
+        theoreticalMoves.clear();
+        // Komplettes Schachfeld durchlaufen und nach B_KING bis B_PAWN suchen
+        // Davon dann die moeglichen Moves berechnen und in allPossbileMovesFromEnemy ablegen
+
+        for (int newy = 0; newy < 8; newy++) {
+            for (int newx = 0; newx < 8; newx++) {
+                Players newPlayer = static_cast<Players>(gMap[newy][newx]);
+
+                if (isWhitePiece(player)) {
+                    if (isBlackPiece(newPlayer)) {
+                        // Der Bauer hat einen Spezialfall. Er kann nur schraeg schlagen
+                        if (newPlayer == Players::B_PAWN) {
+                            getPawnAttackMoves(newPlayer, newx, newy, allPossbileMovesFromEnemy);
+                        }
+                        else {
+                            getPossibleMoves(newPlayer, newx, newy, allPossbileMovesFromEnemy);
+                        }
+                    }
+                }
+                if (isBlackPiece(player)) {
+                    if (isWhitePiece(newPlayer)) {
+                        // Der Bauer hat einen Spezialfall. Er kann nur schraeg schlagen
+                        if (newPlayer == Players::W_PAWN) {
+                            getPawnAttackMoves(newPlayer, newx, newy, allPossbileMovesFromEnemy);
+                        }
+                        else {
+                            getPossibleMoves(newPlayer, newx, newy, allPossbileMovesFromEnemy);
+                        }
+                    }
+                }
+
+
+            }
+        }
+
 
         // Weiss ist am Zug
         if (turn && isBlackPiece(player)) {
@@ -817,9 +948,110 @@ public:
             return;
         }
 
-
         // Aufgrund des ermittelten Spielers, muessen die jeweiligen Move-Regeln herangezogen werden
+        getPossibleMoves(player, x, y, possibleMoves);
 
+        updateKingPosition();
+
+
+        bool whiteInCheck = isThreatend(whiteKingPosition.first, whiteKingPosition.second, false);
+
+        bool blackInCheck = isThreatend(blackKingPosition.first, blackKingPosition.second, true);
+
+
+        Schachmatt erst wenn kein Spieler auf meiner Seite mehr was gegen den Bedroher machen kann
+
+
+        if (whiteInCheck) {
+            check = Check::CHECK_BLACK;
+            won = Won::NONE;
+
+            whiteKingPossibleMoves.clear();
+
+            getPossibleMoves(Players::W_KING, whiteKingPosition.first, whiteKingPosition.second, whiteKingPossibleMoves);
+
+            whiteKingPossibleMoves.erase(
+                std::remove_if(whiteKingPossibleMoves.begin(), whiteKingPossibleMoves.end(),
+                    [&](const std::pair<int, int>& move) {
+                        return isThreatend(move.first, move.second, false);
+                }),
+                whiteKingPossibleMoves.end()
+            );
+            // Weiss hat gewonnen
+            if (whiteKingPossibleMoves.empty()) {
+                check = Check::CHECK_NONE;
+                won = Won::WON_BLACK;
+            }
+        } else if (blackInCheck) {
+            check = Check::CHECK_WHITE;
+            won = Won::NONE;
+
+            blackKingPossibleMoves.clear();
+
+            getPossibleMoves(Players::B_KING, blackKingPosition.first, blackKingPosition.second, blackKingPossibleMoves);
+
+            blackKingPossibleMoves.erase(
+                std::remove_if(blackKingPossibleMoves.begin(), blackKingPossibleMoves.end(),
+                    [&](const std::pair<int, int>& move) {
+                        return isThreatend(move.first, move.second, true);
+                    }),
+                    blackKingPossibleMoves.end()
+                );
+
+            // Schwarz hat gewonnen
+            if (blackKingPossibleMoves.empty()) {
+                check = Check::CHECK_NONE;
+                won = Won::WON_WHITE;
+            }
+        } else {
+            check = Check::CHECK_NONE;
+            won = Won::NONE;
+        }
+
+
+        if (player == Players::W_KING || player == Players::B_KING) {
+
+            // Schauen, ob Werte von possibleMoves uebereinstimmen mit Werten von allPossbileMovesFromEnemy
+            possibleMoves.erase(
+                std::remove_if(possibleMoves.begin(), possibleMoves.end(),[&](const std::pair<int, int>& move) {
+                    return std::find(
+                    allPossbileMovesFromEnemy.begin(),
+                    allPossbileMovesFromEnemy.end(),
+                    move) != allPossbileMovesFromEnemy.end();
+                }),
+                possibleMoves.end()
+                );
+
+            possibleMoves.erase(
+                std::remove_if(possibleMoves.begin(), possibleMoves.end(),[&](const std::pair<int, int>& move) {
+                    return std::find(
+                    theoreticalMoves.begin(),
+                    theoreticalMoves.end(),
+                    move) != theoreticalMoves.end();
+                }),
+                possibleMoves.end()
+                );
+
+        }
+
+    }
+
+    void getPawnAttackMoves(Players player, int x, int y, std::vector<std::pair<int, int>>& vec) {
+        if (player == Players::W_PAWN) {
+            if (y > 0) {
+                if (x > 0) vec.emplace_back(x - 1, y - 1);
+                if (x < 7) vec.emplace_back(x + 1, y - 1);
+            }
+        }
+        else if (player == Players::B_PAWN) {
+            if (y < 7) {
+                if (x > 0) vec.emplace_back(x - 1, y + 1);
+                if (x < 7) vec.emplace_back(x + 1, y + 1);
+            }
+        }
+    }
+
+    void getPossibleMoves(Players player, int x, int y, std::vector<std::pair<int, int>>& vec) {
         switch (player) {
 
             case Players::W_KING: {
@@ -841,11 +1073,11 @@ public:
                     // Wenn Feld leer ist oder auf dem Feld eine Schwarze Figur steht
                     if (isEmpty(player) || isBlackPiece(player)) {
                         // Move hinzufuegen
-                        possibleMoves.emplace_back(nx, ny);
+                        vec.emplace_back(nx, ny);
                     }
 
                     //if (player == Players::EMPTY || player >= Players::B_KING) {
-                    //    possibleMoves.emplace_back(nx, ny);
+                    //    vec.emplace_back(nx, ny);
                     //}
                 };
 
@@ -877,11 +1109,11 @@ public:
                     auto player = static_cast<Players>(gMap[ny][nx]);
 
                     if (isEmpty(player) || isWhitePiece(player)) {
-                        possibleMoves.emplace_back(nx, ny);
+                        vec.emplace_back(nx, ny);
                     }
 
                     //if (player == Players::EMPTY || (player >= Players::W_KING && player < Players::B_KING)) {
-                    //    possibleMoves.emplace_back(nx, ny);
+                    //    vec.emplace_back(nx, ny);
                     //}
                 };
 
@@ -901,6 +1133,9 @@ public:
             case Players::W_QUEEN: {
 
                 auto tryMove = [&](int dx, int dy) {
+
+                    bool hitEnemy = false;
+
                     int nx = x;
                     int ny = y;
 
@@ -915,15 +1150,32 @@ public:
                         auto player = static_cast<Players>(gMap[ny][nx]);
 
                         if (isEmpty(player)) {
-                            possibleMoves.emplace_back(nx, ny);
+                            if (hitEnemy) {
+                                theoreticalMoves.emplace_back(nx, ny);
+                            }
+                            else {
+                                vec.emplace_back(nx, ny);
+                            }
 
                         }
                         else if (isWhitePiece(player)) {
                             break;
                         }
                         else if (isBlackPiece(player)) {
-                            possibleMoves.emplace_back(nx, ny);
-                            break;
+                            // Fuegt das Feld hinter der gegnerischen Figur nicht mehr hinzu
+                            // vec.emplace_back(nx, ny);
+                            // break;
+
+
+                            // Wenn hier gelandet: Flag setzen
+                            if (hitEnemy) {
+                                theoreticalMoves.emplace_back(nx, ny);
+                            }
+                            else {
+                                vec.emplace_back(nx, ny);
+                                hitEnemy = true;
+                            }
+
                         }
                     }
                 };
@@ -943,6 +1195,9 @@ public:
             case Players::B_QUEEN: {
 
                 auto tryMove = [&](int dx, int dy) {
+
+                    bool hitEnemy = false;
+
                     int nx = x;
                     int ny = y;
 
@@ -957,14 +1212,31 @@ public:
                         auto player = static_cast<Players>(gMap[ny][nx]);
 
                         if (isEmpty(player)) {
-                            possibleMoves.emplace_back(nx, ny);
+                            if (hitEnemy) {
+                                theoreticalMoves.emplace_back(nx, ny);
+                            }
+                            else {
+                                vec.emplace_back(nx, ny);
+                            }
                         }
                         else if (isBlackPiece(player)) {
                             break;
                         }
                         else if (isWhitePiece(player)) {
-                            possibleMoves.emplace_back(nx, ny);
-                            break;
+                            // Fuegt das Feld hinter der gegnerischen Figur nicht mehr hinzu
+                            // vec.emplace_back(nx, ny);
+                            // break;
+
+
+                            // Wenn hier gelandet: Flag setzen
+                            if (hitEnemy) {
+                                theoreticalMoves.emplace_back(nx, ny);
+                            }
+                            else {
+                                vec.emplace_back(nx, ny);
+                                hitEnemy = true;
+                            }
+
                         }
                     }
                 };
@@ -988,6 +1260,9 @@ public:
                 // While-Schleife um zu ueberpruefen, wie viele Felder frei sind
                 // Richtung nach oben
                 int nx = x, ny = y;
+
+                bool hitEnemy = false;
+
                 while (ny >= 0){
                     nx = x;
                     ny -= 1;
@@ -1002,15 +1277,30 @@ public:
                     if (isWhitePiece(player) || ny < 0){
                         break;
                     }
-                    possibleMoves.emplace_back(nx, ny);
+
+                    if (hitEnemy) {
+                        theoreticalMoves.emplace_back(nx, ny);
+                    }
+                    else {
+                        vec.emplace_back(nx, ny);
+                    }
+
                     if (isBlackPiece(player)) {
-                        break;
+                        if (player == Players::B_KING) {
+                            hitEnemy = true;
+                        }
+                        else {
+                            break;
+                        }
                     }
                 }
 
                 // Richtung nach unten
                 nx = x;
                 ny = y;
+
+                hitEnemy = false;
+
                 while (ny <= 7){
                     nx = x;
                     ny += 1;
@@ -1025,15 +1315,30 @@ public:
                     if ((isWhitePiece(player)) || ny > 7){
                         break;
                     }
-                    possibleMoves.emplace_back(nx, ny);
+                    if (hitEnemy) {
+                        theoreticalMoves.emplace_back(nx, ny);
+                    }
+                    else {
+                        vec.emplace_back(nx, ny);
+                    }
                     if (isBlackPiece(player)) {
-                        break;
+
+                        if (player == Players::B_KING) {
+                            hitEnemy = true;
+                        }
+                        else {
+                            break;
+                        }
+
                     }
                 }
 
                 // Richtung nach links
                 nx = x;
                 ny = y;
+
+                hitEnemy = false;
+
                 while (nx >= 0){
                     nx -= 1;
                     ny = y;
@@ -1048,15 +1353,30 @@ public:
                     if ((isWhitePiece(player)) || nx < 0){
                         break;
                     }
-                    possibleMoves.emplace_back(nx, ny);
+
+                    if (hitEnemy) {
+                        theoreticalMoves.emplace_back(nx, ny);
+                    }
+                    else {
+                        vec.emplace_back(nx, ny);
+                    }
+
                     if (isBlackPiece(player)) {
-                        break;
+                        if (player == Players::B_KING) {
+                            hitEnemy = true;
+                        }
+                        else {
+                            break;
+                        }
                     }
                 }
 
                 // Richtung nach rechts
                 nx = x;
                 ny = y;
+
+                hitEnemy = false;
+
                 while (nx >= 0){
                     nx += 1;
                     ny = y;
@@ -1071,9 +1391,21 @@ public:
                     if ((isWhitePiece(player)) || nx > 7){
                         break;
                     }
-                    possibleMoves.emplace_back(nx, ny);
+
+                    if (hitEnemy) {
+                        theoreticalMoves.emplace_back(nx, ny);
+                    }
+                    else {
+                        vec.emplace_back(nx, ny);
+                    }
+
                     if (isBlackPiece(player)) {
-                        break;
+                        if (player == Players::B_KING) {
+                            hitEnemy = true;
+                        }
+                        else {
+                            break;
+                        }
                     }
                 }
 
@@ -1085,6 +1417,9 @@ public:
                 // While-Schleife um zu ueberpruefen, wie viele Felder frei sind
                 // Richtung nach oben
                 int nx = x, ny = y;
+
+                bool hitEnemy = false;
+
                 while (ny >= 0){
                     nx = x;
                     ny -= 1;
@@ -1098,15 +1433,30 @@ public:
                     if ((isBlackPiece(player)) || ny < 0){
                         break;
                     }
-                    possibleMoves.emplace_back(nx, ny);
+
+                    if (hitEnemy) {
+                        theoreticalMoves.emplace_back(nx, ny);
+                    }
+                    else {
+                        vec.emplace_back(nx, ny);
+                    }
+
                     if (isWhitePiece(player)) {
-                        break;
+                        if (player == Players::W_KING) {
+                            hitEnemy = true;
+                        }
+                        else {
+                            break;
+                        }
                     }
                 }
 
                 // Richtung nach unten
                 nx = x;
                 ny = y;
+
+                hitEnemy = false;
+
                 while (ny <= 7){
                     nx = x;
                     ny += 1;
@@ -1120,15 +1470,30 @@ public:
                     if ((isBlackPiece(player)) || ny > 7){
                         break;
                     }
-                    possibleMoves.emplace_back(nx, ny);
+
+                    if (hitEnemy) {
+                        theoreticalMoves.emplace_back(nx, ny);
+                    }
+                    else {
+                        vec.emplace_back(nx, ny);
+                    }
+
                     if (isWhitePiece(player)) {
-                        break;
+                        if (player == Players::W_KING) {
+                            hitEnemy = true;
+                        }
+                        else {
+                            break;
+                        }
                     }
                 }
 
                 // Richtung nach links
                 nx = x;
                 ny = y;
+
+                hitEnemy = false;
+
                 while (nx >= 0){
                     nx -= 1;
                     ny = y;
@@ -1142,15 +1507,30 @@ public:
                     if ((isBlackPiece(player)) || nx < 0){
                         break;
                     }
-                    possibleMoves.emplace_back(nx, ny);
+
+                    if (hitEnemy) {
+                        theoreticalMoves.emplace_back(nx, ny);
+                    }
+                    else {
+                        vec.emplace_back(nx, ny);
+                    }
+
                     if (isWhitePiece(player)) {
-                        break;
+                        if (player == Players::W_KING) {
+                            hitEnemy = true;
+                        }
+                        else {
+                            break;
+                        }
                     }
                 }
 
                 // Richtung nach rechts
                 nx = x;
                 ny = y;
+
+                hitEnemy = false;
+
                 while (nx >= 0){
                     nx += 1;
                     ny = y;
@@ -1164,9 +1544,23 @@ public:
                     if ((isBlackPiece(player)) || nx > 7){
                         break;
                     }
-                    possibleMoves.emplace_back(nx, ny);
+
+                    if (hitEnemy) {
+                        theoreticalMoves.emplace_back(nx, ny);
+                    }
+                    else {
+                        vec.emplace_back(nx, ny);
+                    }
+
                     if (isWhitePiece(player)) {
-                        break;
+
+                        if (player == Players::W_KING) {
+                            hitEnemy = true;
+                        }
+                        else {
+                            break;
+                        }
+
                     }
                 }
 
@@ -1179,6 +1573,9 @@ public:
                 int startY = y;
 
                 auto tryMove = [&](int dx, int dy) {
+
+                    bool hitEnemy = false;
+
                     int nx = startX;
                     int ny = startY;
 
@@ -1199,12 +1596,27 @@ public:
 
                         // Weiss darf Schwarz schlagen
                         if (isBlackPiece(player)) {
-                            possibleMoves.emplace_back(nx, ny);
-                            break;
+
+                            if (player == Players::B_KING) {
+                                vec.emplace_back(nx, ny);
+                                hitEnemy = true;
+                            }
+                            else {
+                                vec.emplace_back(nx, ny);
+                                break;
+                            }
+
                         }
                         // Leeres Feld ist begehbar
                         if (isEmpty(player)) {
-                            possibleMoves.emplace_back(nx, ny);
+
+                            if (hitEnemy) {
+                                theoreticalMoves.emplace_back(nx, ny);
+                            }
+                            else {
+                                vec.emplace_back(nx, ny);
+                            }
+
                         }
 
                     }
@@ -1225,6 +1637,9 @@ public:
                 int startY = y;
 
                 auto tryMove = [&](int dx, int dy) {
+
+                    bool hitEnemy = false;
+
                     int nx = startX;
                     int ny = startY;
 
@@ -1244,12 +1659,23 @@ public:
                         }
                         // Schwarz darf weiss schlagen
                         if (isWhitePiece(player)) {
-                            possibleMoves.emplace_back(nx, ny);
-                            break;
+                            if (player == Players::W_KING) {
+                                vec.emplace_back(nx, ny);
+                                hitEnemy = true;
+                            }
+                            else {
+                                vec.emplace_back(nx, ny);
+                                break;
+                            }
                         }
                         // Leeres Feld ist begehbar
                         if (isEmpty(player)) {
-                            possibleMoves.emplace_back(nx, ny);
+                            if (hitEnemy) {
+                                theoreticalMoves.emplace_back(nx, ny);
+                            }
+                            else {
+                                vec.emplace_back(nx, ny);
+                            }
                         }
 
                     }
@@ -1273,7 +1699,7 @@ public:
                     if (tx >= 0 && tx < 8 && ty >= 0 && ty < 8) {
                         auto player = static_cast<Players>(gMap[ty][tx]);
                         if (isEmpty(player) || isBlackPiece(player)) {
-                            possibleMoves.emplace_back(tx, ty);
+                            vec.emplace_back(tx, ty);
                         }
                     }
                 };
@@ -1300,7 +1726,7 @@ public:
                     if (tx >= 0 && tx < 8 && ty >= 0 && ty < 8) {
                         auto player = static_cast<Players>(gMap[ty][tx]);
                         if (isEmpty(player) || (isWhitePiece(player))) {
-                            possibleMoves.emplace_back(tx, ty);
+                            vec.emplace_back(tx, ty);
                         }
                     }
                 };
@@ -1324,10 +1750,10 @@ public:
                     // Wenn Feld frei ist
                     if (isEmpty(static_cast<Players>(gMap[y-1][x]))) {
                         std::cout << "Feld frei" << std::endl;
-                        possibleMoves.emplace_back(x, y-1);
+                        vec.emplace_back(x, y-1);
                         // y == 6 => Weisser Bauer ist noch auf seiner Startlinie
                         if (y == 6 && isEmpty(static_cast<Players>(gMap[y-2][x]))) {
-                            possibleMoves.emplace_back(x, y-2);
+                            vec.emplace_back(x, y-2);
                         }
                     }
                     // Wenn das Feld links oben links nicht leer ist
@@ -1338,7 +1764,8 @@ public:
                         }
                         // Wenn auf dem Feld eine schwarze Schachfigur ist
                         else {
-                            possibleMoves.emplace_back(x-1, y-1);
+                            vec.emplace_back(x-1, y-1);
+
                         }
                     }
                     // Wenn das Feld oben rechts nicht leer ist
@@ -1348,7 +1775,8 @@ public:
                         }
                         // Wenn auf dem Feld eine schwarze Schachfigur ist
                         else {
-                            possibleMoves.emplace_back(x+1, y-1);
+                            vec.emplace_back(x+1, y-1);
+
                         }
                     }
                 }
@@ -1360,10 +1788,10 @@ public:
                 if (y < 7) {
                     if (isEmpty(static_cast<Players>(gMap[y+1][x]))) {
                         std::cout << "Feld frei" << std::endl;
-                        possibleMoves.emplace_back(x, y+1);
+                        vec.emplace_back(x, y+1);
                         // y == 6 => Weisser Bauer ist noch auf seiner Startlinie
                         if (y == 1 && isEmpty(static_cast<Players>(gMap[y+2][x]))) {
-                            possibleMoves.emplace_back(x, y+2);
+                            vec.emplace_back(x, y+2);
                         }
                     }
                     // Richtung unten links
@@ -1374,14 +1802,14 @@ public:
                         }
                         // Wenn der Spieler unten links ein Weisser ist
                         else {
-                            possibleMoves.emplace_back(x-1, y+1);
+                            vec.emplace_back(x-1, y+1);
                         }
                     }
                     if (x < 7 && !isEmpty(static_cast<Players>(gMap[y+1][x+1]))) {
                         if (isBlackPiece(static_cast<Players>(gMap[y+1][x+1]))){
                         }
                         else {
-                            possibleMoves.emplace_back(x+1, y+1);
+                            vec.emplace_back(x+1, y+1);
                         }
                     }
                 }
@@ -1393,8 +1821,8 @@ public:
                 std::cout << "No valid move" << std::endl;
                 break;
         }
-
     }
+
 
 
     void drawPossibleMoves() {
@@ -1415,7 +1843,7 @@ public:
 int main() {
 
     const int screenW = 1400;
-    const int screenH = 1000;
+    const int screenH = 1200;
 
     InitWindow(screenW, screenH, "chess");
 
