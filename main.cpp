@@ -880,6 +880,29 @@ public:
 
     }
 
+
+    bool wouldKingBeThreatenedAfterMove(int fromX, int fromY, int toX, int toY, Players king) {
+        int captured = gMap[toY][toX];
+
+        gMap[toY][toX] = static_cast<int>(king);
+        gMap[fromY][fromX] = static_cast<int>(Players::EMPTY);
+
+        bool threatened;
+
+        if (king == Players::W_KING) {
+            threatened = isThreatend(toX, toY, false); // von Schwarz bedroht
+        }
+        else {
+            threatened = isThreatend(toX, toY, true); // von Weiss bedroht
+        }
+
+        gMap[fromY][fromX] = static_cast<int>(king);
+        gMap[toY][toX] = captured;
+
+        return threatened;
+    }
+
+
     void calculatePossibleMoves() {
 
         // Spieler(position) auf dem geklickten Feld
@@ -959,7 +982,7 @@ public:
         bool blackInCheck = isThreatend(blackKingPosition.first, blackKingPosition.second, true);
 
 
-        Schachmatt erst wenn kein Spieler auf meiner Seite mehr was gegen den Bedroher machen kann
+        //Schachmatt erst wenn kein Spieler auf meiner Seite mehr was gegen den Bedroher machen kann
 
 
         if (whiteInCheck) {
@@ -970,6 +993,7 @@ public:
 
             getPossibleMoves(Players::W_KING, whiteKingPosition.first, whiteKingPosition.second, whiteKingPossibleMoves);
 
+            // Schauen ob die moeglichen Moves vom Koenig bedroht werden
             whiteKingPossibleMoves.erase(
                 std::remove_if(whiteKingPossibleMoves.begin(), whiteKingPossibleMoves.end(),
                     [&](const std::pair<int, int>& move) {
@@ -1030,6 +1054,18 @@ public:
                     move) != theoreticalMoves.end();
                 }),
                 possibleMoves.end()
+                );
+
+            possibleMoves.erase(
+                    std::remove_if(possibleMoves.begin(), possibleMoves.end(),
+                        [&](const std::pair<int, int>& move) {
+                            return wouldKingBeThreatenedAfterMove(
+                                x, y,
+                                move.first, move.second,
+                                player
+                            );
+                        }),
+                    possibleMoves.end()
                 );
 
         }
