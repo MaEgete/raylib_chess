@@ -316,7 +316,8 @@ public:
 
         DrawRectangle(restartX, restartY, restartW, restartH, WHITE);
         DrawRectangleLines(restartX+10, restartY + 10, restartW - 20, restartH - 20, BLACK);
-        DrawText("Restart!", this->midX - 100, this->fieldY + fieldlength + 20 + 50, 50, BLACK);
+        int width = MeasureText("Restart!", 50);
+        DrawText("Restart!", this->midX - width/2, this->fieldY + fieldlength + 20 + 50, 50, BLACK);
     }
 
     // Regeln
