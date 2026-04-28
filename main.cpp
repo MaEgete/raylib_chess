@@ -3,6 +3,7 @@
 #include <vector>
 #include <utility>
 #include <algorithm>
+#include <complex>
 #include <ranges>
 #include <format>
 
@@ -147,6 +148,13 @@ private:
     static bool blackLeftRookMoved;
 
 
+    Rectangle logRectangle;
+
+    // Eine Liste, wo einem Spieler ein Zug zugewiesen wird
+    std::vector<std::pair<Players, std::pair<int,int>>> logList;
+
+
+
 public:
 
     Game(int fieldlength = 600) : fieldlength{fieldlength}, blocksize{fieldlength / 8} {
@@ -176,6 +184,8 @@ public:
         }
 
         updateKingPosition();
+
+        logRectangle = Rectangle{(float)this->fieldX, 10, (float)this->fieldlength, 180};
 
     }
 
@@ -223,7 +233,7 @@ public:
                 int xPos = this->fieldX + 10;
                 int yPos = this->fieldY + 10 + 40 + fontSize;
 
-                for (int i = 0; i < 5; i++) {
+                for (int i = 0; i < allWhitePieces.size(); i++) {
                     Rectangle rec(xPos, yPos, this->chooseRecW, this->chooseRecH);
                     if (mouseCollision(mousePos, rec)) {
                         std::cout << "mouseCollision" << std::endl;
@@ -231,17 +241,6 @@ public:
 
                         switch (i) {
                             case 0:
-                                std::cout << "KING" << std::endl;
-
-                                if (!turn) {
-                                    gMap[lastMove.second][lastMove.first] = static_cast<int>(Players::W_KING);
-                                }
-                                else {
-                                    gMap[lastMove.second][lastMove.first] = static_cast<int>(Players::B_KING);
-                                }
-
-                                break;
-                            case 1:
                                 std::cout << "QUEEN" << std::endl;
 
                                 if (!turn) {
@@ -251,7 +250,7 @@ public:
                                     gMap[lastMove.second][lastMove.first] = static_cast<int>(Players::B_QUEEN);
                                 }
                                 break;
-                            case 2:
+                            case 1:
                                 std::cout << "ROOK" << std::endl;
 
                                 if (!turn) {
@@ -261,7 +260,7 @@ public:
                                     gMap[lastMove.second][lastMove.first] = static_cast<int>(Players::B_ROOK);
                                 }
                                 break;
-                            case 3:
+                            case 2:
                                 std::cout << "BISHOP" << std::endl;
 
                                 if (!turn) {
@@ -272,7 +271,7 @@ public:
                                 }
 
                                 break;
-                            case 4:
+                            case 3:
                                 std::cout << "KNIGHT" << std::endl;
 
                                 if (!turn) {
@@ -315,6 +314,7 @@ public:
         drawFigures();
         drawText();
         drawLostFigures();
+        drawLogList();
 
         if (gameMode == GameMode::CHOOSE_MODE) {
             drawChooseField();
@@ -357,6 +357,145 @@ public:
         moveFigure();
     }
 
+    std::string playerToString(const Players& player) {
+        switch (player) {
+            case Players::W_KING:
+                return "W_KING";
+                break;
+            case Players::W_QUEEN:
+                return "W_QUEEN";
+                break;
+            case Players::W_ROOK:
+                return "W_ROOK";
+                break;
+            case Players::W_BISHOP:
+                return "W_BISHOP";
+                break;
+            case Players::W_KNIGHT:
+                return "W_KNIGHT";
+                break;
+            case Players::W_PAWN:
+                return "W_PAWN";
+                break;
+            case Players::B_KING:
+                return "B_KING";
+                break;
+            case Players::B_QUEEN:
+                return "B_QUEEN";
+                break;
+            case Players::B_ROOK:
+                return "B_ROOK";
+                break;
+            case Players::B_BISHOP:
+                return "B_BISHOP";
+                break;
+            case Players::B_KNIGHT:
+                return "B_KNIGHT";
+                break;
+            case Players::B_PAWN:
+                return "B_PAWN";
+                break;
+        }
+
+        return "";
+    }
+
+    std::string coordinatesToLabels(int x, int y) {
+
+        std::cout << "x: " << x << " y: " << y << std::endl;
+
+        std::string text = "";
+        switch (x) {
+            case 0:
+                text += "A";
+                break;
+            case 1:
+                text += "B";
+                break;
+            case 2:
+                text += "C";
+                break;
+            case 3:
+                text += "D";
+                break;
+            case 4:
+                text += "E";
+                break;
+            case 5:
+                text += "F";
+                break;
+            case 6:
+                text += "G";
+                break;
+            case 7:
+                text += "H";
+                break;
+        }
+
+        std::vector<int> tmp{8,7,6,5,4,3,2,1};
+
+        text += std::to_string(tmp.at(y));
+
+        std::cout << "location: " << text << std::endl;
+
+        return text;
+
+    }
+
+
+
+
+    void drawLogList() {
+
+        DrawRectangleRec(logRectangle, {153,152,92,150});
+
+        DrawLine(logRectangle.x + logRectangle.width/2,
+            logRectangle.y + 10,
+            logRectangle.x + logRectangle.width/2,
+            logRectangle.y + logRectangle.height - 10, \
+            {110, 95, 0, 255});
+
+
+        //DrawText("test", logRectangle.x + 10, logRectangle.y + 10, 30, BLACK);
+
+
+
+        // Eintraege der Liste printen - Weiss links - Schwarz rechts
+        int wCount = 0;
+        int bCount = 0;
+        for (const std::pair<Players, std::pair<int,int>>& var : logList) {
+            Players player = var.first;
+            std::string text = playerToString(player);
+
+            int x = var.second.first;
+            int y = var.second.second;
+
+            std:: cout << "x: " << x << " y: " << y << std::endl;
+
+            std::string location = coordinatesToLabels(x, y);
+
+            text += " -> " + location;
+
+            int fontSize = 30;
+
+            // Weiss auf der linken Spalte
+            if (isWhitePiece(player)) {
+                DrawText(text.c_str(), logRectangle.x + 10, logRectangle.y + 10 + fontSize * wCount, fontSize, WHITE);
+                wCount++;
+            }
+            // Schwarz auf der rechten Spalte
+            else if (isBlackPiece(player)) {
+                DrawText(text.c_str(), logRectangle.x + logRectangle.width / 2 + 10, logRectangle.y + 10 + fontSize * bCount, 30, BLACK);
+                bCount++;
+            }
+
+        }
+
+
+
+    }
+
+
     void drawEndField() {
         DrawRectangleRec(field, {200, 96, 232,200});
 
@@ -395,9 +534,7 @@ public:
         }
         else {
             drawFiguresLost(allBlackPieces, this->fieldX + 10, 0, 30, 1, this->fieldY + 10 + 40, true, GRAY);
-
         }
-
 
 
     }
@@ -618,7 +755,7 @@ public:
 
     void drawLabels() {
         std::vector<std::string> labelsY = {"A", "B", "C", "D", "E", "F", "G", "H"};
-        std::vector<int> labelsX = {1, 2, 3, 4, 5, 6, 7, 8};
+        std::vector<int> labelsX = {8, 7, 6, 5, 4, 3, 2, 1};
 
         int fontsize = 30;
         int offset = 20;
@@ -790,6 +927,8 @@ public:
         lostBlackPieces.clear();
         lostWhitePieces.clear();
 
+        logList.clear();
+
         check = Check::CHECK_NONE;
         won = Won::NONE;
         gameMode = GameMode::PLAY;
@@ -905,6 +1044,12 @@ public:
 
                             // Endposition wird auf die Spielerindex gesetzt
                             gMap[move.second][move.first] = gMap[clickedField.second][clickedField.first];
+
+                            Players player = static_cast<Players>(gMap[clickedField.second][clickedField.first]);
+
+                            // Spielzug loggen
+                            logList.emplace_back(player, move);
+
 
                             // Ursprungsposition wird auf 0 gesetzt (EMPTY)
                             gMap[clickedField.second][clickedField.first] = static_cast<int>(Players::EMPTY);
@@ -1156,6 +1301,44 @@ public:
         // Aufgrund des ermittelten Spielers, muessen die jeweiligen Move-Regeln herangezogen werden
         getPossibleMoves(player, x, y, possibleMoves);
 
+        possibleMoves.erase(std::remove_if(possibleMoves.begin(), possibleMoves.end(), \
+            [&](const std::pair<int, int>& move) {
+                int captured = gMap[move.second][move.first];
+
+                gMap[move.second][move.first] = gMap[y][x];
+                gMap[y][x] = static_cast<int>(Players::EMPTY);
+
+                updateKingPosition();
+
+                bool ownKingInCheck;
+
+                if (isWhitePiece(player)) {
+                    ownKingInCheck = isThreatend(
+                        whiteKingPosition.first,
+                        whiteKingPosition.second,
+                        false
+                        );
+                }
+                else {
+                    ownKingInCheck = isThreatend(
+                        blackKingPosition.first,
+                        blackKingPosition.second,
+                        true
+                        );
+                }
+
+                gMap[y][x] = static_cast<int>(player);
+                gMap[move.second][move.first] = captured;
+
+                updateKingPosition();
+
+                return ownKingInCheck;
+        }),
+        possibleMoves.end());
+
+
+
+
         updateKingPosition();
 
 
@@ -1309,8 +1492,6 @@ public:
     }
 
     void getPossibleMoves(Players player, int x, int y, std::vector<std::pair<int, int>>& vec) {
-
-
 
         switch (player) {
 
@@ -2109,6 +2290,8 @@ public:
                 std::cout << "No valid move" << std::endl;
                 break;
         }
+
+
     }
 
 
