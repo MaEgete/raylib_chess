@@ -4,7 +4,6 @@
 #include <utility>
 #include <algorithm>
 #include <complex>
-#include <ranges>
 #include <format>
 
 class Game {
@@ -174,18 +173,18 @@ public:
         pieceSpritesheet = LoadTexture("../images/chesspieces.png");
 
         // Ganzes Sheet in 12 Bloecke aufteilen
-        float tileW = pieceSpritesheet.width / 6.0;
-        float tileH = pieceSpritesheet.height / 2.0;
+        auto tileW = static_cast<float>(pieceSpritesheet.width / 6.0);
+        auto tileH = static_cast<float>(pieceSpritesheet.height / 2.0);
         for (int i = 0; i < 6; i++) {
-            pieceSprites[i] = Rectangle{i*tileW, 0, tileW, tileH};
+            pieceSprites[i] = Rectangle{static_cast<float>(i)*tileW, 0, tileW, tileH};
         }
         for (int i = 0; i < 6; i++) {
-            pieceSprites[6 + i] = Rectangle{i*tileW, tileH, tileW, tileH};
+            pieceSprites[6 + i] = Rectangle{static_cast<float>(i)*tileW, tileH, tileW, tileH};
         }
 
         updateKingPosition();
 
-        logRectangle = Rectangle{(float)this->fieldX, 10, (float)this->fieldlength, 180};
+        logRectangle = Rectangle{static_cast<float>(this->fieldX), 10, static_cast<float>(this->fieldlength), 180};
 
     }
 
@@ -193,7 +192,7 @@ public:
         UnloadTexture(pieceSpritesheet);
     }
 
-    bool mouseCollision(Vector2 mousePos, Rectangle rec){
+    static bool mouseCollision(Vector2 mousePos, Rectangle rec){
 
         if (mousePos.x >= rec.x && mousePos.x <= (rec.x + rec.width) &&
             mousePos.y >= rec.y && mousePos.y <= (rec.y + rec.height)) \
@@ -209,8 +208,8 @@ public:
             Vector2 mousePos = GetMousePosition();
 
             // Maus hat auf Restart geklickt
-            if (mousePos.x >= restartX && mousePos.x <= (restartX + restartW)
-                && mousePos.y >= restartY && mousePos.y <= (restartY + restartH)) {
+            if (mousePos.x >= static_cast<float>(restartX) && mousePos.x <= static_cast<float>(restartX + restartW)
+                && mousePos.y >= static_cast<float>(restartY) && mousePos.y <= static_cast<float>(restartY + restartH)) {
 
                 std::cout << "Restart" << std::endl;
                 restart();
@@ -234,7 +233,7 @@ public:
                 int yPos = this->fieldY + 10 + 40 + fontSize;
 
                 for (int i = 0; i < allWhitePieces.size(); i++) {
-                    Rectangle rec(xPos, yPos, this->chooseRecW, this->chooseRecH);
+                    Rectangle rec(static_cast<float>(xPos), static_cast<float>(yPos), static_cast<float>(this->chooseRecW), static_cast<float>(this->chooseRecH));
                     if (mouseCollision(mousePos, rec)) {
                         std::cout << "mouseCollision" << std::endl;
                         std::cout << "i = " << i << std::endl;
@@ -357,7 +356,7 @@ public:
         moveFigure();
     }
 
-    std::string playerToString(const Players& player) {
+    static std::string playerToString(const Players& player) {
         switch (player) {
             case Players::W_KING:
                 return "W_KING";
@@ -395,16 +394,19 @@ public:
             case Players::B_PAWN:
                 return "B_PAWN";
                 break;
+            case Players::EMPTY:
+                return "";
+                break;
         }
 
         return "";
     }
 
-    std::string coordinatesToLabels(int x, int y) {
+    static std::string coordinatesToLabels(int x, int y) {
 
         std::cout << "x: " << x << " y: " << y << std::endl;
 
-        std::string text = "";
+        std::string text;
         switch (x) {
             case 0:
                 text += "A";
@@ -430,6 +432,9 @@ public:
             case 7:
                 text += "H";
                 break;
+            default:
+                text += "ERROR";
+                break;
         }
 
         std::vector<int> tmp{8,7,6,5,4,3,2,1};
@@ -449,10 +454,10 @@ public:
 
         DrawRectangleRec(logRectangle, {153,152,92,150});
 
-        DrawLine(logRectangle.x + logRectangle.width/2,
-            logRectangle.y + 10,
-            logRectangle.x + logRectangle.width/2,
-            logRectangle.y + logRectangle.height - 10, \
+        DrawLine(static_cast<int>(logRectangle.x + logRectangle.width/2),
+            static_cast<int>(logRectangle.y + 10),
+            static_cast<int>(logRectangle.x + logRectangle.width/2),
+            static_cast<int>(logRectangle.y + logRectangle.height - 10),
             {110, 95, 0, 255});
 
 
@@ -480,12 +485,12 @@ public:
 
             // Weiss auf der linken Spalte
             if (isWhitePiece(player)) {
-                DrawText(text.c_str(), logRectangle.x + 10, logRectangle.y + 10 + fontSize * wCount, fontSize, WHITE);
+                DrawText(text.c_str(), static_cast<int>(logRectangle.x + 10), static_cast<int>(logRectangle.y + 10 + static_cast<float>(fontSize) * static_cast<float>(wCount)), fontSize, WHITE);
                 wCount++;
             }
             // Schwarz auf der rechten Spalte
             else if (isBlackPiece(player)) {
-                DrawText(text.c_str(), logRectangle.x + logRectangle.width / 2 + 10, logRectangle.y + 10 + fontSize * bCount, 30, BLACK);
+                DrawText(text.c_str(), static_cast<int>(logRectangle.x + logRectangle.width / 2 + 10), static_cast<int>(logRectangle.y + 10 + static_cast<float>(fontSize) * static_cast<float>(bCount)), 30, BLACK);
                 bCount++;
             }
 
@@ -496,7 +501,7 @@ public:
     }
 
 
-    void drawEndField() {
+    void drawEndField() const {
         DrawRectangleRec(field, {200, 96, 232,200});
 
         if (won == Won::WON_WHITE) {
@@ -505,7 +510,7 @@ public:
             int fontSize = 30;
             int textWidth = MeasureText(text.c_str(), fontSize);
 
-            DrawText(text.c_str(), field.x + (field.width / 2) - textWidth/2, field.y + (field.height / 2) - fontSize/2, fontSize, WHITE);
+            DrawText(text.c_str(), static_cast<int>(field.x + (field.width / 2) - static_cast<float>(textWidth)/2), static_cast<int>(field.y + (field.height / 2) - static_cast<float>(fontSize)/2), fontSize, WHITE);
         }
         else if (won == Won::WON_BLACK) {
             std::string text = "Schwarz hat gewonnen!";
@@ -513,7 +518,7 @@ public:
             int fontSize = 30;
             int textWidth = MeasureText(text.c_str(), fontSize);
 
-            DrawText(text.c_str(), field.x + (field.width / 2) - textWidth/2, field.y + (field.height / 2) - fontSize/2, fontSize, BLACK);
+            DrawText(text.c_str(), static_cast<int>(field.x + (field.width / 2) - static_cast<float>(textWidth)/2), static_cast<int>(field.y + (field.height / 2) - static_cast<float>(fontSize)/2), fontSize, BLACK);
         }
 
 
@@ -539,7 +544,7 @@ public:
 
     }
 
-    void drawFiguresLost(std::vector<Players>& vect, int blackXoff = 0, int whiteXoff = 0, int fontSize = 30, int offset = 1, int yOff = 0, bool background = false, Color backgroundColor = GREEN) {
+    static void drawFiguresLost(std::vector<Players>& vect, int blackXoff = 0, int whiteXoff = 0, int fontSize = 30, int offset = 1, int yOff = 0, bool background = false, Color backgroundColor = GREEN) {
         for (auto& var : vect) {
             switch (var) {
                 case Players::B_KING: {
@@ -723,7 +728,7 @@ public:
     }
 
     // Spielfeld zeichnen
-    void drawField() {
+    void drawField() const {
         // Hintergrund Spielfeld
         DrawRectangleRec(field, {206,130,64,255});
 
@@ -753,7 +758,7 @@ public:
 
     }
 
-    void drawLabels() {
+    void drawLabels() const {
         std::vector<std::string> labelsY = {"A", "B", "C", "D", "E", "F", "G", "H"};
         std::vector<int> labelsX = {8, 7, 6, 5, 4, 3, 2, 1};
 
@@ -779,8 +784,8 @@ public:
 
     void drawClickedField() {
         if (clickedField.first != -1 && clickedField.second != -1) {
-            float nx = this->fieldX + (this->blocksize * clickedField.first);
-            float ny = this->fieldY + (this->blocksize * clickedField.second);
+            int nx = this->fieldX + (this->blocksize * clickedField.first);
+            int ny = this->fieldY + (this->blocksize * clickedField.second);
             DrawRectangle(nx, ny, this->blocksize, this->blocksize, {255,0,0,255});
             DrawRectangleLines(nx, ny, this->blocksize, this->blocksize, BLACK);
 
@@ -892,16 +897,16 @@ public:
         return false;
     }
 
-    bool isEmpty(const Players& player) {
+    static bool isEmpty(const Players& player) {
         return player == Players::EMPTY;
     }
 
     // Returns True when player is a black piece
-    bool isBlackPiece(const Players& player){
+    static bool isBlackPiece(const Players& player){
         return player >= Players::B_KING;
     }
 
-    bool isWhitePiece(const Players& player) {
+    static bool isWhitePiece(const Players& player) {
         return player >= Players::W_KING && player < Players::B_KING;
     }
 
@@ -976,16 +981,16 @@ public:
 
 
             // Maus hat aufs Spielfeld geklickt
-            if (mousePos.x > fieldX && mousePos.x < (fieldX + fieldlength)
-                && mousePos.y > fieldY && mousePos.y < (fieldY + fieldlength)) {
+            if (mousePos.x > static_cast<float>(fieldX) && mousePos.x < static_cast<float>(fieldX + fieldlength)
+                && mousePos.y > static_cast<float>(fieldY) && mousePos.y < static_cast<float>(fieldY + fieldlength)) {
                 std::cout << "Mouse clicked on field" << std::endl;
 
                 // Identifizieren des geklickten Blocks
                 float nx = mousePos.x - static_cast<float>(fieldX);
                 float ny = mousePos.y - static_cast<float>(fieldY);
 
-                int x = static_cast<int>(nx / blocksize);
-                int y = static_cast<int>(ny / blocksize);
+                int x = static_cast<int>(nx / static_cast<float>(blocksize));
+                int y = static_cast<int>(ny / static_cast<float>(blocksize));
 
                 std::cout << "x: " << x << " y: " << y << std::endl;
 
@@ -1045,7 +1050,7 @@ public:
                             // Endposition wird auf die Spielerindex gesetzt
                             gMap[move.second][move.first] = gMap[clickedField.second][clickedField.first];
 
-                            Players player = static_cast<Players>(gMap[clickedField.second][clickedField.first]);
+                            auto player = static_cast<Players>(gMap[clickedField.second][clickedField.first]);
 
                             // Spielzug loggen
                             logList.emplace_back(player, move);
@@ -1114,7 +1119,7 @@ public:
 
         for (int yy = 0; yy < 8; yy++) {
             for (int xx = 0; xx < 8; xx++) {
-                Players p = static_cast<Players>(gMap[yy][xx]);
+                auto p = static_cast<Players>(gMap[yy][xx]);
 
                 // Schwarz wird von Weiss bedroht
                 // und Weiss wird von schwarz bedroht
@@ -1173,7 +1178,7 @@ public:
         for (int x = 0; x < 8; x++) {
 
             // Aktuelle Figur holen
-            Players p = static_cast<Players>(gMap[y][x]);
+            auto p = static_cast<Players>(gMap[y][x]);
 
             // Nur Figuren der aktuellen Farbe betrachten
             if (white && !isWhitePiece(p)) continue;
@@ -1256,7 +1261,7 @@ public:
 
         for (int newy = 0; newy < 8; newy++) {
             for (int newx = 0; newx < 8; newx++) {
-                Players newPlayer = static_cast<Players>(gMap[newy][newx]);
+                auto newPlayer = static_cast<Players>(gMap[newy][newx]);
 
                 if (isWhitePiece(player)) {
                     if (isBlackPiece(newPlayer)) {
@@ -1435,7 +1440,7 @@ public:
 
     }
 
-    void getPawnAttackMoves(Players player, int x, int y, std::vector<std::pair<int, int>>& vec) {
+    static void getPawnAttackMoves(Players player, int x, int y, std::vector<std::pair<int, int>>& vec) {
         if (player == Players::W_PAWN) {
             if (y > 0) {
                 if (x > 0) vec.emplace_back(x - 1, y - 1);
@@ -1450,7 +1455,7 @@ public:
         }
     }
 
-    void rochade() {
+    void rochade() const {
         if (gMap[7][4] == static_cast<int>(Players::EMPTY) || gMap[7][4] != static_cast<int>(Players::W_KING)) {
             whiteKingMoved = true;
         }
@@ -1476,7 +1481,7 @@ public:
         }
     }
 
-    void getKingAttackMoves(Players p, int x, int y, std::vector<std::pair<int,int>>& moves) {
+    static void getKingAttackMoves(Players p, int x, int y, std::vector<std::pair<int,int>>& moves) {
         for (int dy = -1; dy <= 1; dy++) {
             for (int dx = -1; dx <= 1; dx++) {
                 if (dx == 0 && dy == 0) continue;
@@ -2290,16 +2295,13 @@ public:
                 std::cout << "No valid move" << std::endl;
                 break;
         }
-
-
     }
 
 
-
-    void drawPossibleMoves() {
+    void drawPossibleMoves() const {
         for (auto move : possibleMoves) {
-            float nx = this->fieldX + (blocksize * move.first);
-            float ny = this->fieldY + (blocksize * move.second);
+            int nx = this->fieldX + (blocksize * move.first);
+            int ny = this->fieldY + (blocksize * move.second);
             DrawRectangle(nx, ny, blocksize, blocksize, {140,0,0,255});
             DrawRectangleLines(nx, ny, blocksize, blocksize, BLACK);
         }
@@ -2318,8 +2320,8 @@ bool Game::blackLeftRookMoved = false;
 
 int main() {
 
-    const int screenW = 1400;
-    const int screenH = 1200;
+    constexpr int screenW = 1400;
+    constexpr int screenH = 1200;
 
     InitWindow(screenW, screenH, "chess");
 
