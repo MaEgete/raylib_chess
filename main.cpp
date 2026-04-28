@@ -138,7 +138,13 @@ private:
     std::vector<std::pair<int, int>> whiteKingPossibleMoves{};
     std::vector<std::pair<int, int>> blackKingPossibleMoves{};
 
-    std::vector<std::pair<int, int>> threatenPositions{};
+
+    static bool whiteKingMoved;
+    static bool blackKingMoved;
+    static bool whiteRightRookMoved;
+    static bool blackRightRookMoved;
+    static bool whiteLeftRookMoved;
+    static bool blackLeftRookMoved;
 
 
 public:
@@ -325,6 +331,7 @@ public:
 
     // Regeln
     void update() {
+        rochade();
         moveFigure();
     }
 
@@ -739,6 +746,16 @@ public:
 
         check = Check::CHECK_NONE;
         won = Won::NONE;
+
+
+        whiteKingMoved = false;
+        blackKingMoved = false;
+        whiteRightRookMoved = false;
+        blackRightRookMoved = false;
+        whiteLeftRookMoved = false;
+        blackLeftRookMoved = false;
+
+
     }
 
     void updateKingPosition() {
@@ -823,6 +840,31 @@ public:
 
                             found = true;
 
+                            // Weisser Koenig will kurze Rochade machen
+                            if (gMap[clickedField.second][clickedField.first] == static_cast<int>(Players::W_KING) && move.second == 7 && move.first == 6) {
+                                gMap[7][5] = static_cast<int>(Players::W_ROOK);
+                                gMap[7][7] = static_cast<int>(Players::EMPTY);
+                            }
+
+                            // Schwarzer Koenig will kurze Rochade machen
+                            if (gMap[clickedField.second][clickedField.first] == static_cast<int>(Players::B_KING) && move.second == 0 && move.first == 6) {
+                                gMap[0][5] = static_cast<int>(Players::W_ROOK);
+                                gMap[0][7] = static_cast<int>(Players::EMPTY);
+                            }
+
+                            // Weisser Koenig will lange Rochade machen
+                            if (gMap[clickedField.second][clickedField.first] == static_cast<int>(Players::W_KING) && move.second == 7 && move.first == 2) {
+                                gMap[7][3] = static_cast<int>(Players::W_ROOK);
+                                gMap[7][0] = static_cast<int>(Players::EMPTY);
+                            }
+
+                            // Schwarzer Koenig will lange Rochade machen
+                            if (gMap[clickedField.second][clickedField.first] == static_cast<int>(Players::W_KING) && move.second == 0 && move.first == 2) {
+                                gMap[0][3] = static_cast<int>(Players::W_ROOK);
+                                gMap[0][0] = static_cast<int>(Players::EMPTY);
+                            }
+
+
                             // Endposition wird auf die Spielerindex gesetzt
                             gMap[move.second][move.first] = gMap[clickedField.second][clickedField.first];
 
@@ -899,7 +941,10 @@ public:
                     continue;
                 }
 
-                if (p == Players::W_PAWN || p == Players::B_PAWN) {
+                if (p == Players::W_KING || p == Players::B_KING) {
+                    getKingAttackMoves(p, xx, yy, enemyMoves); // nur normale 1-Feld-Angriffe, keine Rochade
+                }
+                else if (p == Players::W_PAWN || p == Players::B_PAWN) {
                     getPawnAttackMoves(p, xx, yy, enemyMoves);
                 }
                 else {
@@ -936,9 +981,9 @@ public:
     }
 
 
-// Prüft, ob es IRGENDEINEN legalen Zug gibt,
-// der das aktuelle Schach aufhebt
-bool hasAnyLegalMoveToEscapeCheck(bool white) {
+    // Prüft, ob es IRGENDEINEN legalen Zug gibt,
+    // der das aktuelle Schach aufhebt
+    bool hasAnyLegalMoveToEscapeCheck(bool white) {
 
     // Gehe über das gesamte Brett
     for (int y = 0; y < 8; y++) {
@@ -1071,7 +1116,7 @@ bool hasAnyLegalMoveToEscapeCheck(bool white) {
         }
 
         // Aufgrund des ermittelten Spielers, muessen die jeweiligen Move-Regeln herangezogen werden
-        getPossibleMoves(player, x, y, possibleMoves, true);
+        getPossibleMoves(player, x, y, possibleMoves);
 
         updateKingPosition();
 
@@ -1088,7 +1133,7 @@ bool hasAnyLegalMoveToEscapeCheck(bool white) {
 
             whiteKingPossibleMoves.clear();
 
-            getPossibleMoves(Players::W_KING, whiteKingPosition.first, whiteKingPosition.second, whiteKingPossibleMoves, true);
+            getPossibleMoves(Players::W_KING, whiteKingPosition.first, whiteKingPosition.second, whiteKingPossibleMoves);
 
             // Schauen ob die moeglichen Moves vom Koenig bedroht werden
             whiteKingPossibleMoves.erase(
@@ -1109,7 +1154,7 @@ bool hasAnyLegalMoveToEscapeCheck(bool white) {
 
             blackKingPossibleMoves.clear();
 
-            getPossibleMoves(Players::B_KING, blackKingPosition.first, blackKingPosition.second, blackKingPossibleMoves, true);
+            getPossibleMoves(Players::B_KING, blackKingPosition.first, blackKingPosition.second, blackKingPossibleMoves);
 
             blackKingPossibleMoves.erase(
                 std::remove_if(blackKingPossibleMoves.begin(), blackKingPossibleMoves.end(),
@@ -1184,39 +1229,48 @@ bool hasAnyLegalMoveToEscapeCheck(bool white) {
         }
     }
 
-    void getPossibleMoves(Players player, int x, int y, std::vector<std::pair<int, int>>& vec, bool rochade = false) {
-
-        static bool whiteKingMoved = false;
-        static bool blackKingMoved = false;
-        static bool whiteRightRookMoved = false;
-        static bool blackRightRookMoved = false;
-        static bool whiteLeftRookMoved = false;
-        static bool blackLeftRookMoved = false;
-
-        if (rochade && gMap[7][4] == static_cast<int>(Players::EMPTY)) {
+    void rochade() {
+        if (gMap[7][4] == static_cast<int>(Players::EMPTY) || gMap[7][4] != static_cast<int>(Players::W_KING)) {
             whiteKingMoved = true;
         }
 
-        if (rochade && gMap[7][7] == static_cast<int>(Players::EMPTY)) {
+        if (gMap[7][7] == static_cast<int>(Players::EMPTY) || gMap[7][7] != static_cast<int>(Players::W_ROOK)) {
             whiteRightRookMoved = true;
         }
 
-        if (rochade && gMap[7][0] == static_cast<int>(Players::EMPTY)) {
+        if (gMap[7][0] == static_cast<int>(Players::EMPTY) || gMap[7][0] != static_cast<int>(Players::W_ROOK)) {
             whiteLeftRookMoved = true;
         }
 
-        if (rochade && gMap[0][4] == static_cast<int>(Players::EMPTY)) {
+        if (gMap[0][4] == static_cast<int>(Players::EMPTY) || gMap[0][4] != static_cast<int>(Players::B_KING)) {
             blackKingMoved = true;
         }
 
-        if (rochade && gMap[0][7] == static_cast<int>(Players::EMPTY)) {
+        if (gMap[0][7] == static_cast<int>(Players::EMPTY) || gMap[0][7] != static_cast<int>(Players::B_ROOK)) {
             blackRightRookMoved = true;
         }
 
-        if (rochade && gMap[0][0] == static_cast<int>(Players::EMPTY)) {
+        if (gMap[0][0] == static_cast<int>(Players::EMPTY) || gMap[0][0] != static_cast<int>(Players::B_ROOK)) {
             blackLeftRookMoved = true;
         }
+    }
 
+    void getKingAttackMoves(Players p, int x, int y, std::vector<std::pair<int,int>>& moves) {
+        for (int dy = -1; dy <= 1; dy++) {
+            for (int dx = -1; dx <= 1; dx++) {
+                if (dx == 0 && dy == 0) continue;
+
+                int nx = x + dx;
+                int ny = y + dy;
+
+                if (nx >= 0 && nx < 8 && ny >= 0 && ny < 8) {
+                    moves.emplace_back(nx, ny);
+                }
+            }
+        }
+    }
+
+    void getPossibleMoves(Players player, int x, int y, std::vector<std::pair<int, int>>& vec) {
 
 
 
@@ -1259,12 +1313,15 @@ bool hasAnyLegalMoveToEscapeCheck(bool white) {
                 tryMove(-1, -1);
 
 
-                if (!whiteKingMoved && !whiteRightRookMoved) {
-                    vec.emplace_back(6, 7);
-                }
+                if (!isThreatend(x, y, false)) {
+                    if (!whiteKingMoved && !whiteRightRookMoved && gMap[7][5] == static_cast<int>(Players::EMPTY) && gMap[7][6] == static_cast<int>(Players::EMPTY) && !isThreatend(x+1, y, false) && !isThreatend(x+2, y, false)) {
+                        vec.emplace_back(6, 7);
+                    }
 
-                if (!whiteKingMoved && !whiteLeftRookMoved) {
-                    vec.emplace_back(2, 7);
+                    if (!whiteKingMoved && !whiteLeftRookMoved && gMap[7][3] == static_cast<int>(Players::EMPTY) && gMap[7][2] == static_cast<int>(Players::EMPTY) && gMap[7][1] == static_cast<int>(Players::EMPTY) && !isThreatend(x-1, y, false) && !isThreatend(x-2, y, false)) {
+                        vec.emplace_back(2, 7);
+                    }
+
                 }
 
 
@@ -1305,13 +1362,16 @@ bool hasAnyLegalMoveToEscapeCheck(bool white) {
                 tryMove(-1, -1);
 
 
-                if (!blackKingMoved && !blackRightRookMoved) {
-                    vec.emplace_back(6, 0);
+                if (!isThreatend(x, y, true)) {
+                    if (!blackKingMoved && !blackRightRookMoved && gMap[0][5] == static_cast<int>(Players::EMPTY) && gMap[0][6] == static_cast<int>(Players::EMPTY) && !isThreatend(x+1,y, true) && !isThreatend(x+2,y, true)) {
+                        vec.emplace_back(6, 0);
+                    }
+
+                    if (!blackKingMoved && !blackLeftRookMoved && gMap[0][3] == static_cast<int>(Players::EMPTY) && gMap[0][2] == static_cast<int>(Players::EMPTY) && gMap[0][1] == static_cast<int>(Players::EMPTY) && !isThreatend(x-1,y, true) && !isThreatend(x-2,y, true)) {
+                        vec.emplace_back(2, 0);
+                    }
                 }
 
-                if (!blackKingMoved && !blackLeftRookMoved) {
-                    vec.emplace_back(2, 0);
-                }
 
 
                 break;
@@ -1596,41 +1656,12 @@ bool hasAnyLegalMoveToEscapeCheck(bool white) {
                     }
                 }
 
-                if (x == 0 && y == 7) {
-                    if (!whiteKingMoved && !whiteLeftRookMoved) {
-                        vec.emplace_back(3, 7);
-                    }
-                }
-
-                if (x == 7 && y == 7) {
-                    if (!whiteKingMoved && !whiteRightRookMoved) {
-                        vec.emplace_back(5, 7);
-                    }
-                }
-
 
 
                 break;
             }
             case Players::B_ROOK: {
                 std::cout << "B Rook" << std::endl;
-
-
-                std::cout << "bkingmoved: " << blackKingMoved << std::endl;
-                std::cout << "bleftrookmoved: " << blackLeftRookMoved << std::endl;
-                if (x == 0 && y == 0) {
-                    if (!blackKingMoved && !blackLeftRookMoved) {
-                        vec.emplace_back(3, 0);
-                    }
-                }
-
-                if (x == 7 && y == 0) {
-                    if (!blackKingMoved && !blackRightRookMoved) {
-                        vec.emplace_back(5, 0);
-                    }
-                }
-
-
 
                 // While-Schleife um zu ueberpruefen, wie viele Felder frei sind
                 // Richtung nach oben
@@ -1780,8 +1811,6 @@ bool hasAnyLegalMoveToEscapeCheck(bool white) {
                         }
 
                     }
-
-
 
                 }
 
@@ -2058,7 +2087,12 @@ bool hasAnyLegalMoveToEscapeCheck(bool white) {
 
 };
 
-
+bool Game::whiteKingMoved = false;
+bool Game::blackKingMoved = false;
+bool Game::whiteRightRookMoved = false;
+bool Game::blackRightRookMoved = false;
+bool Game::whiteLeftRookMoved = false;
+bool Game::blackLeftRookMoved = false;
 
 
 int main() {
