@@ -4,6 +4,7 @@
 #include <utility>
 #include <algorithm>
 #include <ranges>
+#include <format>
 
 class Game {
 
@@ -137,6 +138,7 @@ private:
     std::vector<std::pair<int, int>> whiteKingPossibleMoves{};
     std::vector<std::pair<int, int>> blackKingPossibleMoves{};
 
+    std::vector<std::pair<int, int>> threatenPositions{};
 
 
 public:
@@ -151,7 +153,7 @@ public:
         field = Rectangle{static_cast<float>(fieldX), static_cast<float>(fieldY), static_cast<float>(fieldlength), static_cast<float>(fieldlength)};
 
         restartX = this->fieldX + fieldlength/4;
-        restartY = this->fieldY + fieldlength + 20;
+        restartY = this->fieldY + fieldlength + 80;
         restartW = fieldlength/2;
         restartH = 150;
 
@@ -167,7 +169,7 @@ public:
             pieceSprites[6 + i] = Rectangle{i*tileW, tileH, tileW, tileH};
         }
 
-        whiteKingPosition = {0, 0};
+        updateKingPosition();
 
     }
 
@@ -316,8 +318,9 @@ public:
 
         DrawRectangle(restartX, restartY, restartW, restartH, WHITE);
         DrawRectangleLines(restartX+10, restartY + 10, restartW - 20, restartH - 20, BLACK);
-        int width = MeasureText("Restart!", 50);
-        DrawText("Restart!", this->midX - width/2, this->fieldY + fieldlength + 20 + 50, 50, BLACK);
+        int fontSize = 50;
+        int width = MeasureText("Restart!", fontSize);
+        DrawText("Restart!", this->midX - width/2, this->restartY + restartH/2 - fontSize/2, fontSize, BLACK);
     }
 
     // Regeln
@@ -555,6 +558,33 @@ public:
             }
         }
 
+        drawLabels();
+
+
+    }
+
+    void drawLabels() {
+        std::vector<std::string> labelsY = {"A", "B", "C", "D", "E", "F", "G", "H"};
+        std::vector<int> labelsX = {1, 2, 3, 4, 5, 6, 7, 8};
+
+        int fontsize = 30;
+        int offset = 20;
+
+        int i = 0;
+        for (const auto& label : labelsY) {
+
+            int textWidth = MeasureText(label.c_str(), fontsize);
+
+
+            DrawText(label.c_str(), this->fieldX + blocksize/2 - textWidth/2 + i++ * blocksize, this->fieldY + fieldlength + offset, fontsize, BLACK);
+        }
+
+        i = 0;
+        for (const auto& label : labelsX) {
+            int textWidth = MeasureText(std::format("{}", label).c_str(), fontsize);
+            DrawText(std::format("{}", label).c_str(), this->fieldX - textWidth - offset, this->fieldY + blocksize/2 + i++ * blocksize - fontsize/2, fontsize, BLACK);
+        }
+
     }
 
     void drawClickedField() {
@@ -707,6 +737,8 @@ public:
         lostBlackPieces.clear();
         lostWhitePieces.clear();
 
+        check = Check::CHECK_NONE;
+        won = Won::NONE;
     }
 
     void updateKingPosition() {
@@ -904,6 +936,72 @@ public:
     }
 
 
+// Prüft, ob es IRGENDEINEN legalen Zug gibt,
+// der das aktuelle Schach aufhebt
+bool hasAnyLegalMoveToEscapeCheck(bool white) {
+
+    // Gehe über das gesamte Brett
+    for (int y = 0; y < 8; y++) {
+        for (int x = 0; x < 8; x++) {
+
+            // Aktuelle Figur holen
+            Players p = static_cast<Players>(gMap[y][x]);
+
+            // Nur Figuren der aktuellen Farbe betrachten
+            if (white && !isWhitePiece(p)) continue;
+            if (!white && !isBlackPiece(p)) continue;
+
+            // Alle möglichen Züge dieser Figur berechnen
+            std::vector<std::pair<int,int>> moves;
+            getPossibleMoves(p, x, y, moves);
+
+            // Jeden möglichen Zug testen
+            for (const auto& move : moves) {
+
+                // Figur, die ggf. geschlagen wird, speichern
+                int captured = gMap[move.second][move.first];
+
+                // ---- ZUG SIMULIEREN ----
+
+                // Figur auf Ziel setzen
+                gMap[move.second][move.first] = gMap[y][x];
+
+                // Ursprungsfeld leeren
+                gMap[y][x] = static_cast<int>(Players::EMPTY);
+
+                // König-Position neu bestimmen (wichtig!)
+                updateKingPosition();
+
+                // Prüfen, ob der eigene König danach noch im Schach ist
+                bool stillInCheck = white
+                    ? isThreatend(whiteKingPosition.first, whiteKingPosition.second, false)
+                    : isThreatend(blackKingPosition.first, blackKingPosition.second, true);
+
+                // ---- ZUG RÜCKGÄNGIG MACHEN ----
+
+                // Ursprüngliche Figur zurücksetzen
+                gMap[y][x] = static_cast<int>(p);
+
+                // Geschlagene Figur (falls vorhanden) wiederherstellen
+                gMap[move.second][move.first] = captured;
+
+                // König-Position wieder aktualisieren
+                updateKingPosition();
+
+                // Wenn es EINEN Zug gibt, der das Schach aufhebt:
+                if (!stillInCheck) {
+                    return true; // Kein Schachmatt
+                }
+            }
+        }
+    }
+
+    // Kein einziger Zug konnte das Schach verhindern → Schachmatt
+    return false;
+}
+
+
+
     void calculatePossibleMoves() {
 
         // Spieler(position) auf dem geklickten Feld
@@ -973,7 +1071,7 @@ public:
         }
 
         // Aufgrund des ermittelten Spielers, muessen die jeweiligen Move-Regeln herangezogen werden
-        getPossibleMoves(player, x, y, possibleMoves);
+        getPossibleMoves(player, x, y, possibleMoves, true);
 
         updateKingPosition();
 
@@ -983,8 +1081,6 @@ public:
         bool blackInCheck = isThreatend(blackKingPosition.first, blackKingPosition.second, true);
 
 
-        //Schachmatt erst wenn kein Spieler auf meiner Seite mehr was gegen den Bedroher machen kann
-
 
         if (whiteInCheck) {
             check = Check::CHECK_BLACK;
@@ -992,7 +1088,7 @@ public:
 
             whiteKingPossibleMoves.clear();
 
-            getPossibleMoves(Players::W_KING, whiteKingPosition.first, whiteKingPosition.second, whiteKingPossibleMoves);
+            getPossibleMoves(Players::W_KING, whiteKingPosition.first, whiteKingPosition.second, whiteKingPossibleMoves, true);
 
             // Schauen ob die moeglichen Moves vom Koenig bedroht werden
             whiteKingPossibleMoves.erase(
@@ -1002,10 +1098,10 @@ public:
                 }),
                 whiteKingPossibleMoves.end()
             );
-            // Weiss hat gewonnen
-            if (whiteKingPossibleMoves.empty()) {
-                check = Check::CHECK_NONE;
-                won = Won::WON_BLACK;
+            // Schwarz hat gewonnen
+            if (!hasAnyLegalMoveToEscapeCheck(true)) {
+                    check = Check::CHECK_NONE;
+                    won = Won::WON_BLACK;
             }
         } else if (blackInCheck) {
             check = Check::CHECK_WHITE;
@@ -1013,7 +1109,7 @@ public:
 
             blackKingPossibleMoves.clear();
 
-            getPossibleMoves(Players::B_KING, blackKingPosition.first, blackKingPosition.second, blackKingPossibleMoves);
+            getPossibleMoves(Players::B_KING, blackKingPosition.first, blackKingPosition.second, blackKingPossibleMoves, true);
 
             blackKingPossibleMoves.erase(
                 std::remove_if(blackKingPossibleMoves.begin(), blackKingPossibleMoves.end(),
@@ -1023,10 +1119,10 @@ public:
                     blackKingPossibleMoves.end()
                 );
 
-            // Schwarz hat gewonnen
-            if (blackKingPossibleMoves.empty()) {
-                check = Check::CHECK_NONE;
-                won = Won::WON_WHITE;
+            // Weiss hat gewonnen
+            if (!hasAnyLegalMoveToEscapeCheck(false)) {
+                    check = Check::CHECK_NONE;
+                    won = Won::WON_WHITE;
             }
         } else {
             check = Check::CHECK_NONE;
@@ -1088,7 +1184,42 @@ public:
         }
     }
 
-    void getPossibleMoves(Players player, int x, int y, std::vector<std::pair<int, int>>& vec) {
+    void getPossibleMoves(Players player, int x, int y, std::vector<std::pair<int, int>>& vec, bool rochade = false) {
+
+        static bool whiteKingMoved = false;
+        static bool blackKingMoved = false;
+        static bool whiteRightRookMoved = false;
+        static bool blackRightRookMoved = false;
+        static bool whiteLeftRookMoved = false;
+        static bool blackLeftRookMoved = false;
+
+        if (rochade && gMap[7][4] == static_cast<int>(Players::EMPTY)) {
+            whiteKingMoved = true;
+        }
+
+        if (rochade && gMap[7][7] == static_cast<int>(Players::EMPTY)) {
+            whiteRightRookMoved = true;
+        }
+
+        if (rochade && gMap[7][0] == static_cast<int>(Players::EMPTY)) {
+            whiteLeftRookMoved = true;
+        }
+
+        if (rochade && gMap[0][4] == static_cast<int>(Players::EMPTY)) {
+            blackKingMoved = true;
+        }
+
+        if (rochade && gMap[0][7] == static_cast<int>(Players::EMPTY)) {
+            blackRightRookMoved = true;
+        }
+
+        if (rochade && gMap[0][0] == static_cast<int>(Players::EMPTY)) {
+            blackLeftRookMoved = true;
+        }
+
+
+
+
         switch (player) {
 
             case Players::W_KING: {
@@ -1127,6 +1258,16 @@ public:
                 tryMove(-1, 0);
                 tryMove(-1, -1);
 
+
+                if (!whiteKingMoved && !whiteRightRookMoved) {
+                    vec.emplace_back(6, 7);
+                }
+
+                if (!whiteKingMoved && !whiteLeftRookMoved) {
+                    vec.emplace_back(2, 7);
+                }
+
+
                 break;
             }
             case Players::B_KING: {
@@ -1162,6 +1303,15 @@ public:
                 tryMove(-1, 1);
                 tryMove(-1, 0);
                 tryMove(-1, -1);
+
+
+                if (!blackKingMoved && !blackRightRookMoved) {
+                    vec.emplace_back(6, 0);
+                }
+
+                if (!blackKingMoved && !blackLeftRookMoved) {
+                    vec.emplace_back(2, 0);
+                }
 
 
                 break;
@@ -1446,10 +1596,41 @@ public:
                     }
                 }
 
+                if (x == 0 && y == 7) {
+                    if (!whiteKingMoved && !whiteLeftRookMoved) {
+                        vec.emplace_back(3, 7);
+                    }
+                }
+
+                if (x == 7 && y == 7) {
+                    if (!whiteKingMoved && !whiteRightRookMoved) {
+                        vec.emplace_back(5, 7);
+                    }
+                }
+
+
+
                 break;
             }
             case Players::B_ROOK: {
                 std::cout << "B Rook" << std::endl;
+
+
+                std::cout << "bkingmoved: " << blackKingMoved << std::endl;
+                std::cout << "bleftrookmoved: " << blackLeftRookMoved << std::endl;
+                if (x == 0 && y == 0) {
+                    if (!blackKingMoved && !blackLeftRookMoved) {
+                        vec.emplace_back(3, 0);
+                    }
+                }
+
+                if (x == 7 && y == 0) {
+                    if (!blackKingMoved && !blackRightRookMoved) {
+                        vec.emplace_back(5, 0);
+                    }
+                }
+
+
 
                 // While-Schleife um zu ueberpruefen, wie viele Felder frei sind
                 // Richtung nach oben
@@ -1599,6 +1780,9 @@ public:
                         }
 
                     }
+
+
+
                 }
 
                 break;
