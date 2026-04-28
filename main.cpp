@@ -194,10 +194,23 @@ public:
     }
 
     void loop() {
-        if (gameMode != GameMode::CHOOSE_MODE) {
+
+        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+            Vector2 mousePos = GetMousePosition();
+
+            // Maus hat auf Restart geklickt
+            if (mousePos.x >= restartX && mousePos.x <= (restartX + restartW)
+                && mousePos.y >= restartY && mousePos.y <= (restartY + restartH)) {
+
+                std::cout << "Restart" << std::endl;
+                restart();
+                }
+        }
+
+        if (gameMode == GameMode::PLAY) {
             update();
         }
-        else {
+        else if (gameMode == GameMode::CHOOSE_MODE){
             // Wenn die Maus eine Figur ausgewaehlt hat
             if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                 Vector2 mousePos = GetMousePosition();
@@ -289,6 +302,9 @@ public:
             }
 
         }
+        else {
+
+        }
         draw();
     }
 
@@ -304,6 +320,10 @@ public:
             drawChooseField();
         }
 
+        if (gameMode == GameMode::END) {
+            drawEndField();
+        }
+
         if (this->check != Check::CHECK_NONE) {
             if (this->check == Check::CHECK_WHITE) {
                 DrawText("Schach", this->fieldX, this->fieldY - 100, 100, WHITE);
@@ -316,9 +336,11 @@ public:
         if (this->won != Won::NONE) {
             if (this->won == Won::WON_WHITE) {
                 DrawText("Schachmatt!", this->fieldX, this->fieldY - 100, 100, WHITE);
+                gameMode = GameMode::END;
             }
             if (this->won == Won::WON_BLACK) {
                 DrawText("Schachmatt!", this->fieldX, this->fieldY - 100, 100, BLACK);
+                gameMode = GameMode::END;
             }
         }
 
@@ -334,6 +356,30 @@ public:
         rochade();
         moveFigure();
     }
+
+    void drawEndField() {
+        DrawRectangleRec(field, {200, 96, 232,200});
+
+        if (won == Won::WON_WHITE) {
+            std::string text = "Weiss hat gewonnen!";
+
+            int fontSize = 30;
+            int textWidth = MeasureText(text.c_str(), fontSize);
+
+            DrawText(text.c_str(), field.x + (field.width / 2) - textWidth/2, field.y + (field.height / 2) - fontSize/2, fontSize, WHITE);
+        }
+        else if (won == Won::WON_BLACK) {
+            std::string text = "Schwarz hat gewonnen!";
+
+            int fontSize = 30;
+            int textWidth = MeasureText(text.c_str(), fontSize);
+
+            DrawText(text.c_str(), field.x + (field.width / 2) - textWidth/2, field.y + (field.height / 2) - fontSize/2, fontSize, BLACK);
+        }
+
+
+    }
+
 
     void drawChooseField() {
 
@@ -746,7 +792,7 @@ public:
 
         check = Check::CHECK_NONE;
         won = Won::NONE;
-
+        gameMode = GameMode::PLAY;
 
         whiteKingMoved = false;
         blackKingMoved = false;
@@ -788,14 +834,6 @@ public:
 
         if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
             Vector2 mousePos = GetMousePosition();
-
-            // Maus hat auf Restart geklickt
-            if (mousePos.x >= restartX && mousePos.x <= (restartX + restartW)
-                && mousePos.y >= restartY && mousePos.y <= (restartY + restartH)) {
-
-                std::cout << "Restart" << std::endl;
-                restart();
-            }
 
 
             // Maus hat aufs Spielfeld geklickt
@@ -2119,7 +2157,7 @@ int main() {
 
         BeginMode2D(cam);
 
-        game.loop();
+            game.loop();
 
         EndMode2D();
 
