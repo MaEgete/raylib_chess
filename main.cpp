@@ -5,6 +5,13 @@
 #include <algorithm>
 #include <complex>
 #include <format>
+#include <list>
+#include <tuple>
+#include <sstream>
+#include <fstream>
+#include <filesystem>
+#include <chrono>
+#include <format>
 
 class Game {
 
@@ -32,6 +39,11 @@ private:
     int restartW;
     int restartH;
 
+    // SaveLog Button
+    Rectangle saveLogButton;
+
+
+
     // PLAY = Spielen
     // CHOOSE_MODE = Figur austauschen mit Bauer
     enum class GameMode {
@@ -44,10 +56,12 @@ private:
         WON_WHITE,
         WON_BLACK,
         NONE,
+        DRAW,
     };
 
     enum class Check {
-        CHECK_WHITE,CHECK_BLACK,
+        CHECK_WHITE,
+        CHECK_BLACK,
         CHECK_NONE,
     };
 
@@ -149,8 +163,18 @@ private:
 
     Rectangle logRectangle;
 
+
     // Eine Liste, wo einem Spieler ein Zug zugewiesen wird
-    std::vector<std::pair<Players, std::pair<int,int>>> logList;
+    // int, int = Feld auf das gezogen wurde
+    // bool = ob auf dem Feld ein gegnerischer Spieler stand
+    std::vector<std::pair<Players, std::tuple<int,int, bool>>> logList;
+
+
+    // Die max 5 Logs die angezeigt werden
+    // Es sollen die indizes von logList hier gespeichert werden
+    std::list<int> actualLogs;
+
+    static bool created;
 
 
 
@@ -170,6 +194,11 @@ public:
         restartW = fieldlength/2;
         restartH = 150;
 
+        saveLogButton.width = fieldlength/2;
+        saveLogButton.height = 150;
+        saveLogButton.x = GetScreenWidth() - saveLogButton.width - 10;
+        saveLogButton.y = GetScreenHeight() - saveLogButton.height - 10;
+
         pieceSpritesheet = LoadTexture("../images/chesspieces.png");
 
         // Ganzes Sheet in 12 Bloecke aufteilen
@@ -184,7 +213,7 @@ public:
 
         updateKingPosition();
 
-        logRectangle = Rectangle{static_cast<float>(this->fieldX), 10, static_cast<float>(this->fieldlength), 180};
+        logRectangle = Rectangle{static_cast<float>(this->fieldX), 10, static_cast<float>(this->fieldlength), 5 * 30 + 20};
 
     }
 
@@ -213,7 +242,19 @@ public:
 
                 std::cout << "Restart" << std::endl;
                 restart();
+
                 }
+
+
+            // Maus hat auf SaveLog geklickt
+            if (mousePos.x >= static_cast<float>(saveLogButton.x) && mousePos.x <= static_cast<float>(saveLogButton.x + saveLogButton.width)
+                && mousePos.y >= static_cast<float>(saveLogButton.y) && mousePos.y <= static_cast<float>(saveLogButton.y + saveLogButton.height)) {
+
+                std::cout << "SaveLog!" << std::endl;
+                saveLogs();
+
+                }
+
         }
 
         if (gameMode == GameMode::PLAY) {
@@ -321,6 +362,8 @@ public:
 
         if (gameMode == GameMode::END) {
             drawEndField();
+            //saveLogs();
+
         }
 
         if (this->check != Check::CHECK_NONE) {
@@ -341,14 +384,35 @@ public:
                 DrawText("Schachmatt!", this->fieldX, this->fieldY - 100, 100, BLACK);
                 gameMode = GameMode::END;
             }
+            if (this->won == Won::DRAW) {
+                DrawText("Patt!", this->fieldX, this->fieldY - 100, 100, BLACK);
+                gameMode = GameMode::END;
+            }
         }
 
+        drawRestartButton();
+
+        drawSaveLogButton();
+
+    }
+
+    void drawSaveLogButton() {
+        DrawRectangleRec(saveLogButton, WHITE);
+        DrawRectangleLines(saveLogButton.x + 10, saveLogButton.y + 10, saveLogButton.width - 20, saveLogButton.height - 20, BLACK);
+        int fontSize = 50;
+        int width = MeasureText("Save Log", fontSize);
+        DrawText("Save Log", saveLogButton.x + saveLogButton.width/2 - width/2, this->saveLogButton.y + saveLogButton.height/2 - fontSize/2, fontSize, BLACK);
+    }
+
+
+    void drawRestartButton() {
         DrawRectangle(restartX, restartY, restartW, restartH, WHITE);
         DrawRectangleLines(restartX+10, restartY + 10, restartW - 20, restartH - 20, BLACK);
         int fontSize = 50;
         int width = MeasureText("Restart!", fontSize);
         DrawText("Restart!", this->midX - width/2, this->restartY + restartH/2 - fontSize/2, fontSize, BLACK);
     }
+
 
     // Regeln
     void update() {
@@ -448,6 +512,116 @@ public:
     }
 
 
+    void saveLogs() {
+
+        // logs_UHRZEIT.txt;
+
+        /*
+        if (created) {
+            return;
+        }
+        */
+
+
+        std::stringstream ss;
+
+        for (const auto& var : logList) {
+
+            Players player = var.first;
+            std::string text = playerToString(player);
+
+            int x = std::get<0>(var.second);
+            int y = std::get<1>(var.second);
+            bool hit = std::get<2>(var.second);
+
+            std::string location = coordinatesToLabels(x, y);
+
+            text += std::string(" -> ") + (hit ? "x" : "") + location;
+
+            ss << text << "\n";
+
+        }
+
+        std::filesystem::path folder = "Logs";
+
+        if (!std::filesystem::exists(folder)) {
+            std::filesystem::create_directory(folder);
+        }
+
+        auto now = std::chrono::system_clock::now();
+        auto now_sec = std::chrono::floor<std::chrono::seconds>(now);
+
+        std::string date = std::format("{:%Y-%m-%d_%H-%M-%S}", now_sec);
+
+        std::string wonText;
+        if (won == Won::WON_WHITE) {
+            wonText = "WHITE_WON";
+        }
+        else if (won == Won::WON_BLACK) {
+            wonText = "BLACK_WON";
+        }
+        else if (won == Won::DRAW) {
+            wonText = "DRAW";
+        }
+        else {
+            wonText = "INGAME";
+        }
+
+        std::string filename = "logs_" + date + "_" + wonText + ".txt";
+
+        std::ofstream file(folder / filename);
+
+        if (file.is_open()) {
+            file << ss.str();
+            file.close();
+        }
+        else {
+            std::cout << "Could not open file" << std::endl;
+        }
+
+
+        created = true;
+
+    }
+
+
+
+    void scrollLogList() {
+
+        // 0 = Kein Scrollen
+        // >0 = nach oben Scrollen
+        // <0 = nach unten Scrollen
+        float wheel = GetMouseWheelMove();
+
+        if (actualLogs.empty()) return;
+        if (logList.empty()) return;
+
+
+        if (logList.size() % 2 != 0) {
+            return;
+        }
+
+        // if(SCROLL_NACH_OBEN && LISTE_IST_VOLL && LISTE_IST_NICHT_GANZ_OBEN){
+        if (wheel > 0 && actualLogs.size() == 10 && actualLogs.front() != 0) {
+            actualLogs.pop_back();
+            actualLogs.pop_back();
+
+            actualLogs.push_front(actualLogs.front() - 1);
+            actualLogs.push_front(actualLogs.front() - 1);
+
+        }
+
+        // if(SCROLL_NACH_UNTEN && LISTE_IST_VOLL && LISTE_IST_NICHT_GANZ_UNTEN){
+        if (wheel < 0 && actualLogs.size() == 10 && actualLogs.back() != logList.size() - 1) {
+            actualLogs.pop_front();
+            actualLogs.pop_front();
+
+            actualLogs.push_back(actualLogs.back() + 1);
+            actualLogs.push_back(actualLogs.back() + 1);
+
+        }
+
+    }
 
 
     void drawLogList() {
@@ -460,26 +634,35 @@ public:
             static_cast<int>(logRectangle.y + logRectangle.height - 10),
             {110, 95, 0, 255});
 
-
         //DrawText("test", logRectangle.x + 10, logRectangle.y + 10, 30, BLACK);
-
-
 
         // Eintraege der Liste printen - Weiss links - Schwarz rechts
         int wCount = 0;
         int bCount = 0;
-        for (const std::pair<Players, std::pair<int,int>>& var : logList) {
+
+        scrollLogList();
+
+
+        for (const int& index : actualLogs) {
+
+            if (index < 0 || index >= logList.size()) continue;
+
+
+            auto var = logList.at(index);
+
+
             Players player = var.first;
             std::string text = playerToString(player);
 
-            int x = var.second.first;
-            int y = var.second.second;
+            int x = std::get<0>(var.second);
+            int y = std::get<1>(var.second);
+            bool hit = std::get<2>(var.second);
 
             std:: cout << "x: " << x << " y: " << y << std::endl;
 
             std::string location = coordinatesToLabels(x, y);
 
-            text += " -> " + location;
+            text += std::string(" -> ") + (hit ? "x" : "") + location;
 
             int fontSize = 30;
 
@@ -494,9 +677,8 @@ public:
                 bCount++;
             }
 
+
         }
-
-
 
     }
 
@@ -570,7 +752,7 @@ public:
                     DrawText(text, blackXoff, yOff + fontSize * offset, fontSize, BLACK);
                     offset++;
                     break;
-            }
+                    }
                 case Players::B_ROOK: {
                     //std::cout << "B_ROOK" << std::endl;
                     const char* text = "B_ROOK";
@@ -933,6 +1115,7 @@ public:
         lostWhitePieces.clear();
 
         logList.clear();
+        actualLogs.clear();
 
         check = Check::CHECK_NONE;
         won = Won::NONE;
@@ -945,6 +1128,9 @@ public:
         whiteLeftRookMoved = false;
         blackLeftRookMoved = false;
 
+        created = false;
+
+        
 
     }
 
@@ -994,7 +1180,7 @@ public:
 
                 std::cout << "x: " << x << " y: " << y << std::endl;
 
-                // Wenn das angeklickte Feld, schon angeklickt war, dann wird die Markierung weggemacht
+                // Wenn das angeklickte Feld schon angeklickt war, wird die Markierung weggemacht
                 if (this->clickedField.first == x && this->clickedField.second == y) {
                     this->clickedField = {-1, -1};
                     std::cout << "---\nclicked field already clicked\n---" << std::endl;
@@ -1048,12 +1234,34 @@ public:
 
 
                             // Endposition wird auf die Spielerindex gesetzt
+                            bool hit = false;
+                            if (isEnemyPiece(static_cast<Players>(gMap[move.second][move.first]))) {
+                                hit = true;
+                            }
+
                             gMap[move.second][move.first] = gMap[clickedField.second][clickedField.first];
 
                             auto player = static_cast<Players>(gMap[clickedField.second][clickedField.first]);
 
                             // Spielzug loggen
-                            logList.emplace_back(player, move);
+                            logList.emplace_back(player, std::make_tuple(move.first, move.second, hit));
+
+                            // Mehr Elemente sind in logList als angezeigt werden koennen
+                            if (logList.size() > 10) {
+
+                                // Erstes element in actualLogs rauswerfen
+
+                                actualLogs.pop_front();
+
+                                // Neues letztes Element einfuegen
+
+                                actualLogs.push_back(logList.size() - 1);
+
+                            }
+                            if (logList.size() <= 10) {
+                                // Index vom neuesten Element speichern
+                                actualLogs.push_back(logList.size()-1);
+                            }
 
 
                             // Ursprungsposition wird auf 0 gesetzt (EMPTY)
@@ -1067,7 +1275,7 @@ public:
                             lastMove.second = move.second;
 
 
-                            // Wenn auf der obersten Linie ein weisser Bauer steht, dann soll das Fenster aufgerufen werden
+                            // Wenn auf der obersten Linie ein weisser Bauer steht,  soll das Fenster aufgerufen werden
                             // Das gleiche gilt fuer den schwarzen Bauern auf der untersten Linie
 
                             for (int i = 0; i < 8; i++) {
@@ -1171,67 +1379,52 @@ public:
 
     // Prüft, ob es IRGENDEINEN legalen Zug gibt,
     // der das aktuelle Schach aufhebt
-    bool hasAnyLegalMoveToEscapeCheck(bool white) {
+    bool hasAnyLegalMove(bool white) {
 
-    // Gehe über das gesamte Brett
-    for (int y = 0; y < 8; y++) {
-        for (int x = 0; x < 8; x++) {
+        for (int y = 0; y < 8; y++) {
+            for (int x = 0; x < 8; x++) {
 
-            // Aktuelle Figur holen
-            auto p = static_cast<Players>(gMap[y][x]);
+                auto p = static_cast<Players>(gMap[y][x]);
 
-            // Nur Figuren der aktuellen Farbe betrachten
-            if (white && !isWhitePiece(p)) continue;
-            if (!white && !isBlackPiece(p)) continue;
+                if (white && !isWhitePiece(p)) continue;
+                if (!white && !isBlackPiece(p)) continue;
 
-            // Alle möglichen Züge dieser Figur berechnen
-            std::vector<std::pair<int,int>> moves;
-            getPossibleMoves(p, x, y, moves);
+                std::vector<std::pair<int,int>> moves;
+                getPossibleMoves(p, x, y, moves);
 
-            // Jeden möglichen Zug testen
-            for (const auto& move : moves) {
+                for (const auto& move : moves) {
 
-                // Figur, die ggf. geschlagen wird, speichern
-                int captured = gMap[move.second][move.first];
+                    auto target = static_cast<Players>(gMap[move.second][move.first]);
 
-                // ---- ZUG SIMULIEREN ----
+                    // Eigene Figuren dürfen nicht geschlagen werden
+                    if (white && isWhitePiece(target)) continue;
+                    if (!white && isBlackPiece(target)) continue;
 
-                // Figur auf Ziel setzen
-                gMap[move.second][move.first] = gMap[y][x];
+                    int captured = gMap[move.second][move.first];
 
-                // Ursprungsfeld leeren
-                gMap[y][x] = static_cast<int>(Players::EMPTY);
+                    gMap[move.second][move.first] = gMap[y][x];
+                    gMap[y][x] = static_cast<int>(Players::EMPTY);
 
-                // König-Position neu bestimmen (wichtig!)
-                updateKingPosition();
+                    updateKingPosition();
 
-                // Prüfen, ob der eigene König danach noch im Schach ist
-                bool stillInCheck = white
-                    ? isThreatend(whiteKingPosition.first, whiteKingPosition.second, false)
-                    : isThreatend(blackKingPosition.first, blackKingPosition.second, true);
+                    bool kingInCheck = white
+                        ? isThreatend(whiteKingPosition.first, whiteKingPosition.second, false)
+                        : isThreatend(blackKingPosition.first, blackKingPosition.second, true);
 
-                // ---- ZUG RÜCKGÄNGIG MACHEN ----
+                    gMap[y][x] = static_cast<int>(p);
+                    gMap[move.second][move.first] = captured;
 
-                // Ursprüngliche Figur zurücksetzen
-                gMap[y][x] = static_cast<int>(p);
+                    updateKingPosition();
 
-                // Geschlagene Figur (falls vorhanden) wiederherstellen
-                gMap[move.second][move.first] = captured;
-
-                // König-Position wieder aktualisieren
-                updateKingPosition();
-
-                // Wenn es EINEN Zug gibt, der das Schach aufhebt:
-                if (!stillInCheck) {
-                    return true; // Kein Schachmatt
+                    if (!kingInCheck) {
+                        return true;
+                    }
                 }
             }
         }
-    }
 
-    // Kein einziger Zug konnte das Schach verhindern → Schachmatt
-    return false;
-}
+        return false;
+    }
 
 
 
@@ -1342,62 +1535,64 @@ public:
         possibleMoves.end());
 
 
-
-
         updateKingPosition();
 
+        bool whiteInCheck = isThreatend(
+            whiteKingPosition.first,
+            whiteKingPosition.second,
+            false
+        );
 
-        bool whiteInCheck = isThreatend(whiteKingPosition.first, whiteKingPosition.second, false);
+        bool blackInCheck = isThreatend(
+            blackKingPosition.first,
+            blackKingPosition.second,
+            true
+        );
 
-        bool blackInCheck = isThreatend(blackKingPosition.first, blackKingPosition.second, true);
+        // Weiß ist am Zug
+        if (turn) {
 
+            bool whiteHasLegalMove = hasAnyLegalMove(true);
 
-
-        if (whiteInCheck) {
-            check = Check::CHECK_BLACK;
-            won = Won::NONE;
-
-            whiteKingPossibleMoves.clear();
-
-            getPossibleMoves(Players::W_KING, whiteKingPosition.first, whiteKingPosition.second, whiteKingPossibleMoves);
-
-            // Schauen ob die moeglichen Moves vom Koenig bedroht werden
-            whiteKingPossibleMoves.erase(
-                std::remove_if(whiteKingPossibleMoves.begin(), whiteKingPossibleMoves.end(),
-                    [&](const std::pair<int, int>& move) {
-                        return isThreatend(move.first, move.second, false);
-                }),
-                whiteKingPossibleMoves.end()
-            );
-            // Schwarz hat gewonnen
-            if (!hasAnyLegalMoveToEscapeCheck(true)) {
-                    check = Check::CHECK_NONE;
-                    won = Won::WON_BLACK;
+            if (whiteInCheck && !whiteHasLegalMove) {
+                check = Check::CHECK_NONE;
+                won = Won::WON_BLACK;
             }
-        } else if (blackInCheck) {
-            check = Check::CHECK_WHITE;
-            won = Won::NONE;
-
-            blackKingPossibleMoves.clear();
-
-            getPossibleMoves(Players::B_KING, blackKingPosition.first, blackKingPosition.second, blackKingPossibleMoves);
-
-            blackKingPossibleMoves.erase(
-                std::remove_if(blackKingPossibleMoves.begin(), blackKingPossibleMoves.end(),
-                    [&](const std::pair<int, int>& move) {
-                        return isThreatend(move.first, move.second, true);
-                    }),
-                    blackKingPossibleMoves.end()
-                );
-
-            // Weiss hat gewonnen
-            if (!hasAnyLegalMoveToEscapeCheck(false)) {
-                    check = Check::CHECK_NONE;
-                    won = Won::WON_WHITE;
+            else if (!whiteInCheck && !whiteHasLegalMove) {
+                check = Check::CHECK_NONE;
+                won = Won::DRAW; // Patt
             }
-        } else {
-            check = Check::CHECK_NONE;
-            won = Won::NONE;
+            else if (whiteInCheck) {
+                check = Check::CHECK_BLACK;
+                won = Won::NONE;
+            }
+            else {
+                check = Check::CHECK_NONE;
+                won = Won::NONE;
+            }
+        }
+
+        // Schwarz ist am Zug
+        else {
+
+            bool blackHasLegalMove = hasAnyLegalMove(false);
+
+            if (blackInCheck && !blackHasLegalMove) {
+                check = Check::CHECK_NONE;
+                won = Won::WON_WHITE;
+            }
+            else if (!blackInCheck && !blackHasLegalMove) {
+                check = Check::CHECK_NONE;
+                won = Won::DRAW; // Patt
+            }
+            else if (blackInCheck) {
+                check = Check::CHECK_WHITE;
+                won = Won::NONE;
+            }
+            else {
+                check = Check::CHECK_NONE;
+                won = Won::NONE;
+            }
         }
 
 
@@ -2316,6 +2511,8 @@ bool Game::whiteRightRookMoved = false;
 bool Game::blackRightRookMoved = false;
 bool Game::whiteLeftRookMoved = false;
 bool Game::blackLeftRookMoved = false;
+
+bool Game::created = false;
 
 
 int main() {
