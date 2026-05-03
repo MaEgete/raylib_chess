@@ -413,6 +413,20 @@ public:
         DrawText("Restart!", this->midX - width/2, this->restartY + restartH/2 - fontSize/2, fontSize, BLACK);
     }
 
+    bool isBoardFlipped() const {
+        return !turn; // Schwarz am Zug => Schwarz unten
+    }
+
+    std::pair<int, int> boardToView(int x, int y) const {
+        if (!isBoardFlipped()) return {x, y};
+        return {7 - x, 7 - y};
+    }
+
+    std::pair<int, int> viewToBoard(int x, int y) const {
+        if (!isBoardFlipped()) return {x, y};
+        return {7 - x, 7 - y};
+    }
+
 
     // Regeln
     void update() {
@@ -911,68 +925,67 @@ public:
 
     // Spielfeld zeichnen
     void drawField() const {
-        // Hintergrund Spielfeld
         DrawRectangleRec(field, {206,130,64,255});
 
-        static int offset = 1;
+        for (int viewY = 0; viewY < 8; viewY++) {
+            for (int viewX = 0; viewX < 8; viewX++) {
 
-        // Kacheln zeichnen im richtigen Muster
-        for (int y = 0; y < 8; y++) {
-            for (int x = 0; x < 8; x++) {
+                auto [boardX, boardY] = viewToBoard(viewX, viewY);
 
-                int nx = fieldX + (blocksize * x);
-                int ny = fieldY + (blocksize * y);
+                int nx = fieldX + blocksize * viewX;
+                int ny = fieldY + blocksize * viewY;
 
-                if ((x+offset) % 2 == 0) {
+                if ((boardX + boardY) % 2 == 0) {
                     DrawRectangle(nx, ny, blocksize, blocksize, {119,119,119,255});
                 }
-            }
-            if (offset == 0) {
-                offset = 1;
-            }
-            else if (offset == 1) {
-                offset = 0;
             }
         }
 
         drawLabels();
-
-
     }
 
     void drawLabels() const {
-        std::vector<std::string> labelsY = {"A", "B", "C", "D", "E", "F", "G", "H"};
-        std::vector<int> labelsX = {8, 7, 6, 5, 4, 3, 2, 1};
 
         int fontsize = 30;
         int offset = 20;
 
-        int i = 0;
-        for (const auto& label : labelsY) {
+        for (int viewX = 0; viewX < 8; viewX++) {
+            int boardX = isBoardFlipped() ? 7 - viewX : viewX;
+            char label = 'A' + boardX;
 
-            int textWidth = MeasureText(label.c_str(), fontsize);
+            int textWidth = MeasureText(TextFormat("%c", label), fontsize);
 
-
-            DrawText(label.c_str(), this->fieldX + blocksize/2 - textWidth/2 + i++ * blocksize, this->fieldY + fieldlength + offset, fontsize, BLACK);
+            DrawText(TextFormat("%c", label),
+                fieldX + blocksize/2 - textWidth/2 + viewX * blocksize,
+                fieldY + fieldlength + offset,
+                fontsize, BLACK);
         }
 
-        i = 0;
-        for (const auto& label : labelsX) {
-            int textWidth = MeasureText(std::format("{}", label).c_str(), fontsize);
-            DrawText(std::format("{}", label).c_str(), this->fieldX - textWidth - offset, this->fieldY + blocksize/2 + i++ * blocksize - fontsize/2, fontsize, BLACK);
-        }
+        for (int viewY = 0; viewY < 8; viewY++) {
+            int boardY = isBoardFlipped() ? 7 - viewY : viewY;
+            int number = 8 - boardY;
 
+            int textWidth = MeasureText(TextFormat("%d", number), fontsize);
+
+            DrawText(TextFormat("%d", number),
+                fieldX - textWidth - offset,
+                fieldY + blocksize/2 + viewY * blocksize - fontsize/2,
+                fontsize, BLACK);
+        }
     }
 
     void drawClickedField() {
         if (clickedField.first != -1 && clickedField.second != -1) {
-            int nx = this->fieldX + (this->blocksize * clickedField.first);
-            int ny = this->fieldY + (this->blocksize * clickedField.second);
-            DrawRectangle(nx, ny, this->blocksize, this->blocksize, {255,0,0,255});
-            DrawRectangleLines(nx, ny, this->blocksize, this->blocksize, BLACK);
+
+            auto [vx, vy] = boardToView(clickedField.first, clickedField.second);
+
+            int nx = fieldX + (blocksize * vx);
+            int ny = fieldY + (blocksize * vy);
+
+            DrawRectangle(nx, ny, blocksize, blocksize, {255,0,0,255});
+            DrawRectangleLines(nx, ny, blocksize, blocksize, BLACK);
 
             drawPossibleMoves();
-
         }
     }
 
@@ -990,70 +1003,31 @@ public:
 
         for (int y = 0; y < 8; y++) {
             for (int x = 0; x < 8; x++) {
-                int nx = fieldX + (blocksize * x) + (blocksize / 6);
-                int ny = fieldY + (blocksize * y);
 
-                // Bild von Figuren zeichnen
+                auto [vx, vy] = boardToView(x, y);
+
+                int nx = fieldX + (blocksize * vx) + (blocksize / 6);
+                int ny = fieldY + (blocksize * vy);
 
                 switch (static_cast<Players>(gMap[y][x])) {
-                    case Players::EMPTY:
-                        // Feld ist leer
-                        break;
+                    case Players::EMPTY: break;
 
-                    case Players::W_KING: {
-                        drawFiguresHelpMethod(PieceSprite::W_KING, nx, ny);
-                        break;
-                    }
-                    case Players::W_QUEEN: {
-                        drawFiguresHelpMethod(PieceSprite::W_QUEEN, nx, ny);
-                        break;
-                    }
-                    case Players::W_ROOK: {
-                        drawFiguresHelpMethod(PieceSprite::W_ROOK, nx, ny);
-                        break;
-                    }
-                    case Players::W_BISHOP: {
-                        drawFiguresHelpMethod(PieceSprite::W_BISHOP, nx, ny);
-                        break;
-                    }
-                    case Players::W_KNIGHT: {
-                        drawFiguresHelpMethod(PieceSprite::W_KNIGHT, nx, ny);
-                        break;
-                    }
-                    case Players::W_PAWN: {
-                        drawFiguresHelpMethod(PieceSprite::W_PAWN, nx, ny);
-                        break;
-                    }
+                    case Players::W_KING: drawFiguresHelpMethod(PieceSprite::W_KING, nx, ny); break;
+                    case Players::W_QUEEN: drawFiguresHelpMethod(PieceSprite::W_QUEEN, nx, ny); break;
+                    case Players::W_ROOK: drawFiguresHelpMethod(PieceSprite::W_ROOK, nx, ny); break;
+                    case Players::W_BISHOP: drawFiguresHelpMethod(PieceSprite::W_BISHOP, nx, ny); break;
+                    case Players::W_KNIGHT: drawFiguresHelpMethod(PieceSprite::W_KNIGHT, nx, ny); break;
+                    case Players::W_PAWN: drawFiguresHelpMethod(PieceSprite::W_PAWN, nx, ny); break;
 
-                    case Players::B_KING: {
-                        drawFiguresHelpMethod(PieceSprite::B_KING, nx, ny);
-                        break;
-                    }
-                    case Players::B_QUEEN: {
-                        drawFiguresHelpMethod(PieceSprite::B_QUEEN, nx, ny);
-                        break;
-                    }
-                    case Players::B_ROOK: {
-                        drawFiguresHelpMethod(PieceSprite::B_ROOK, nx, ny);
-                        break;
-                    }
-                    case Players::B_BISHOP: {
-                        drawFiguresHelpMethod(PieceSprite::B_BISHOP, nx, ny);
-                        break;
-                    }
-                    case Players::B_KNIGHT: {
-                        drawFiguresHelpMethod(PieceSprite::B_KNIGHT, nx, ny);
-                        break;
-                    }
-                    case Players::B_PAWN: {
-                        drawFiguresHelpMethod(PieceSprite::B_PAWN, nx, ny);
-                        break;
-                    }
-                    default:
-                        std::cout << "False field value" << std::endl;
-                        break;
+                    case Players::B_KING: drawFiguresHelpMethod(PieceSprite::B_KING, nx, ny); break;
+                    case Players::B_QUEEN: drawFiguresHelpMethod(PieceSprite::B_QUEEN, nx, ny); break;
+                    case Players::B_ROOK: drawFiguresHelpMethod(PieceSprite::B_ROOK, nx, ny); break;
+                    case Players::B_BISHOP: drawFiguresHelpMethod(PieceSprite::B_BISHOP, nx, ny); break;
+                    case Players::B_KNIGHT: drawFiguresHelpMethod(PieceSprite::B_KNIGHT, nx, ny); break;
+                    case Players::B_PAWN: drawFiguresHelpMethod(PieceSprite::B_PAWN, nx, ny); break;
+
+                    default: break;
                 }
-
             }
         }
     }
@@ -1177,6 +1151,11 @@ public:
 
                 int x = static_cast<int>(nx / static_cast<float>(blocksize));
                 int y = static_cast<int>(ny / static_cast<float>(blocksize));
+
+
+                auto [bx, by] = viewToBoard(x, y);
+                x = bx;
+                y = by;
 
                 std::cout << "x: " << x << " y: " << y << std::endl;
 
@@ -2495,8 +2474,12 @@ public:
 
     void drawPossibleMoves() const {
         for (auto move : possibleMoves) {
-            int nx = this->fieldX + (blocksize * move.first);
-            int ny = this->fieldY + (blocksize * move.second);
+
+            auto [vx, vy] = boardToView(move.first, move.second);
+
+            int nx = fieldX + (blocksize * vx);
+            int ny = fieldY + (blocksize * vy);
+
             DrawRectangle(nx, ny, blocksize, blocksize, {140,0,0,255});
             DrawRectangleLines(nx, ny, blocksize, blocksize, BLACK);
         }
