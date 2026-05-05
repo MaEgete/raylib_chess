@@ -12,6 +12,8 @@
 #include <filesystem>
 #include <chrono>
 #include <format>
+#include <array>
+#include <stack>
 
 class Game {
 
@@ -42,10 +44,15 @@ private:
     // SaveLog Button
     Rectangle saveLogButton;
 
+    Rectangle loadLogButton;
+
+    Rectangle goBackButton;
+    Rectangle goForwardButton;
+
 
 
     // PLAY = Spielen
-    // CHOOSE_MODE = Figur austauschen mit Bauer
+    // CHOOSE_MODE = Figur austauschen mit Queen, Turm, Springer, Laufer
     enum class GameMode {
         PLAY,
         CHOOSE_MODE,
@@ -100,7 +107,9 @@ private:
     // Hier werden die Rectangles der Texture gespeichert
     std::vector<Rectangle> pieceSprites{static_cast<int>(PieceSprite::COUNT)};
 
-    int gMap[8][8] = {
+    using Board = std::array<std::array<int, 8>, 8>;
+
+    Board gMap{{
         {9 ,11,10,8 ,7 ,10,11,9},
         {12 ,12 ,12 ,12 ,12 ,12 ,12 ,12},
         {0 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
@@ -109,7 +118,7 @@ private:
         {0 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
         {6 ,6 ,6 ,6 ,6 ,6 ,6 ,6},
         {3 ,5 ,4 ,2 ,1 ,4 ,5 ,3},
-    };
+    }};
 
 
     // Angeklicktes Feld markieren
@@ -124,8 +133,14 @@ private:
 
 
 
-    std::vector<Players> lostBlackPieces{};
-    std::vector<Players> lostWhitePieces{};
+    // Maximale Groesse 20 Stueck
+    std::list<Players> lostBlackPieces{};
+    std::stack<Players> recoveryLostBlackPieces{};
+
+    std::list<Players> lostWhitePieces{};
+    std::stack<Players> recoveryLostWhitePieces{};
+
+
     std::vector<Players> allPieces{Players::W_KING, Players::W_QUEEN, Players::W_ROOK, Players::W_BISHOP,
         Players::W_KNIGHT, Players::W_PAWN, Players::B_KING, Players::B_QUEEN, Players::B_ROOK, Players::B_BISHOP,
         Players::B_KNIGHT, Players::B_PAWN};
@@ -163,11 +178,12 @@ private:
 
     Rectangle logRectangle;
 
-
     // Eine Liste, wo einem Spieler ein Zug zugewiesen wird
     // int, int = Feld auf das gezogen wurde
     // bool = ob auf dem Feld ein gegnerischer Spieler stand
     std::vector<std::pair<Players, std::tuple<int,int, bool>>> logList;
+
+    std::stack<std::pair<Players, std::tuple<int,int, bool>>> recoveryLogList;
 
 
     // Die max 5 Logs die angezeigt werden
@@ -175,6 +191,9 @@ private:
     std::list<int> actualLogs;
 
     static bool created;
+
+    size_t fieldsIndex = 0;
+    std::vector<Board> fields;
 
 
 
@@ -198,6 +217,26 @@ public:
         saveLogButton.height = 150;
         saveLogButton.x = GetScreenWidth() - saveLogButton.width - 10;
         saveLogButton.y = GetScreenHeight() - saveLogButton.height - 10;
+
+        loadLogButton.width = saveLogButton.width;
+        loadLogButton.height = saveLogButton.height;
+        loadLogButton.x = 10;
+        loadLogButton.y = saveLogButton.y;
+
+
+        goBackButton.width = 50;
+        goBackButton.height = 50;
+        goBackButton.x = 10;
+        goBackButton.y = 100;
+
+        goForwardButton.width = goBackButton.width;
+        goForwardButton.height = goBackButton.height;
+        goForwardButton.x = goBackButton.x + goBackButton.width + 10;
+        goForwardButton.y = goBackButton.y;
+
+        fields.push_back(gMap);
+        fieldsIndex = 0;
+
 
         pieceSpritesheet = LoadTexture("../images/chesspieces.png");
 
@@ -240,7 +279,6 @@ public:
             if (mousePos.x >= static_cast<float>(restartX) && mousePos.x <= static_cast<float>(restartX + restartW)
                 && mousePos.y >= static_cast<float>(restartY) && mousePos.y <= static_cast<float>(restartY + restartH)) {
 
-                std::cout << "Restart" << std::endl;
                 restart();
 
                 }
@@ -250,8 +288,99 @@ public:
             if (mousePos.x >= static_cast<float>(saveLogButton.x) && mousePos.x <= static_cast<float>(saveLogButton.x + saveLogButton.width)
                 && mousePos.y >= static_cast<float>(saveLogButton.y) && mousePos.y <= static_cast<float>(saveLogButton.y + saveLogButton.height)) {
 
-                std::cout << "SaveLog!" << std::endl;
                 saveLogs();
+
+                }
+
+
+            if (mousePos.x >= static_cast<float>(loadLogButton.x) && mousePos.x <= static_cast<float>(loadLogButton.x + loadLogButton.width)
+                && mousePos.y >= static_cast<float>(loadLogButton.y) && mousePos.y <= static_cast<float>(loadLogButton.y + loadLogButton.height)) {
+
+                std::cout << "Load Log" << std::endl;
+
+                }
+
+            if (mousePos.x >= static_cast<float>(goBackButton.x) && mousePos.x <= static_cast<float>(goBackButton.x + goBackButton.width)
+                && mousePos.y >= static_cast<float>(goBackButton.y) && mousePos.y <= static_cast<float>(goBackButton.y + goBackButton.height)) {
+
+                std::cout << "Go Back" << std::endl;
+
+                if (fieldsIndex != 0 && !logList.empty()) {
+                    fieldsIndex--;
+                    gMap = fields[fieldsIndex];
+
+                    auto element = logList.back();
+
+                    bool hit = std::get<2>(element.second);
+                    Players playerWhoMoved = element.first;
+
+                    if (hit) {
+                        // Weiß hatte geschlagen -> schwarze Figur wurde verloren
+                        if (isWhitePiece(playerWhoMoved) && !lostBlackPieces.empty()) {
+                            recoveryLostBlackPieces.push(lostBlackPieces.back());
+                            lostBlackPieces.pop_back();
+                        }
+
+                        // Schwarz hatte geschlagen -> weiße Figur wurde verloren
+                        else if (isBlackPiece(playerWhoMoved) && !lostWhitePieces.empty()) {
+                            recoveryLostWhitePieces.push(lostWhitePieces.back());
+                            lostWhitePieces.pop_back();
+                        }
+                    }
+
+
+                    recoveryLogList.push(element);
+                    logList.pop_back();
+
+                    rebuildActualLogs();
+
+                    updateKingPosition();
+                    turn = !turn;
+                    clickedField = {-1, -1};
+                    possibleMoves.clear();
+                }
+
+
+                }
+
+
+            if (mousePos.x >= static_cast<float>(goForwardButton.x) && mousePos.x <= static_cast<float>(goForwardButton.x + goForwardButton.width)
+                && mousePos.y >= static_cast<float>(goForwardButton.y) && mousePos.y <= static_cast<float>(goForwardButton.y + goForwardButton.height)) {
+
+                std::cout << "Go Forward" << std::endl;
+
+                if (fieldsIndex + 1 < fields.size() && !recoveryLogList.empty()) {
+                    fieldsIndex++;
+                    gMap = fields[fieldsIndex];
+
+                    auto element = recoveryLogList.top();
+
+                    bool hit = std::get<2>(element.second);
+                    Players playerWhoMoved = element.first;
+
+                    if (hit) {
+                        if (isWhitePiece(playerWhoMoved) && !recoveryLostBlackPieces.empty()) {
+                            lostBlackPieces.push_back(recoveryLostBlackPieces.top());
+                            recoveryLostBlackPieces.pop();
+                        }
+                        else if (isBlackPiece(playerWhoMoved) && !recoveryLostWhitePieces.empty()) {
+                            lostWhitePieces.push_back(recoveryLostWhitePieces.top());
+                            recoveryLostWhitePieces.pop();
+                        }
+                    }
+
+
+                    recoveryLogList.pop();
+                    logList.push_back(element);
+
+                    rebuildActualLogs();
+
+                    updateKingPosition();
+                    turn = !turn;
+                    clickedField = {-1, -1};
+                    possibleMoves.clear();
+                }
+
 
                 }
 
@@ -264,7 +393,6 @@ public:
             // Wenn die Maus eine Figur ausgewaehlt hat
             if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                 Vector2 mousePos = GetMousePosition();
-                std::cout << "test" << std::endl;
                 //Hier irgendwie dann die Figuren aus der Liste auswaehlen koennen
                 //Auflistung ist so:
 
@@ -276,12 +404,9 @@ public:
                 for (int i = 0; i < allWhitePieces.size(); i++) {
                     Rectangle rec(static_cast<float>(xPos), static_cast<float>(yPos), static_cast<float>(this->chooseRecW), static_cast<float>(this->chooseRecH));
                     if (mouseCollision(mousePos, rec)) {
-                        std::cout << "mouseCollision" << std::endl;
-                        std::cout << "i = " << i << std::endl;
 
                         switch (i) {
                             case 0:
-                                std::cout << "QUEEN" << std::endl;
 
                                 if (!turn) {
                                     gMap[lastMove.second][lastMove.first] = static_cast<int>(Players::W_QUEEN);
@@ -291,7 +416,6 @@ public:
                                 }
                                 break;
                             case 1:
-                                std::cout << "ROOK" << std::endl;
 
                                 if (!turn) {
                                     gMap[lastMove.second][lastMove.first] = static_cast<int>(Players::W_ROOK);
@@ -301,7 +425,6 @@ public:
                                 }
                                 break;
                             case 2:
-                                std::cout << "BISHOP" << std::endl;
 
                                 if (!turn) {
                                     gMap[lastMove.second][lastMove.first] = static_cast<int>(Players::W_BISHOP);
@@ -312,7 +435,6 @@ public:
 
                                 break;
                             case 3:
-                                std::cout << "KNIGHT" << std::endl;
 
                                 if (!turn) {
                                     gMap[lastMove.second][lastMove.first] = static_cast<int>(Players::W_KNIGHT);
@@ -393,6 +515,42 @@ public:
         drawRestartButton();
 
         drawSaveLogButton();
+
+        drawLoadLogButton();
+
+        drawGoBackButton();
+
+        drawGoForwardButton();
+
+    }
+
+    void drawLoadLogButton() {
+
+        DrawRectangleRec(loadLogButton, WHITE);
+        DrawRectangleLines(loadLogButton.x + 10, loadLogButton.y + 10, loadLogButton.width - 20, loadLogButton.height - 20, BLACK);
+        int fontSize = 50;
+        int width = MeasureText("Load Log", fontSize);
+        DrawText("Load Log", loadLogButton.x + loadLogButton.width/2 - width/2, this->loadLogButton.y + loadLogButton.height/2 - fontSize/2, fontSize, BLACK);
+
+    }
+
+    void drawGoForwardButton() {
+
+        DrawRectangleRec(goForwardButton, WHITE);
+        DrawRectangleLines(goForwardButton.x + 10, goForwardButton.y + 10, goForwardButton.width - 20, goForwardButton.height - 20, BLACK);
+        int fontSize = 20;
+        int width = MeasureText("->", fontSize);
+        DrawText("->", goForwardButton.x + goForwardButton.width/2 - width/2, this->goForwardButton.y + goForwardButton.height/2 - fontSize/2, fontSize, BLACK);
+
+    }
+
+    void drawGoBackButton() {
+
+        DrawRectangleRec(goBackButton, WHITE);
+        DrawRectangleLines(goBackButton.x + 10, goBackButton.y + 10, goBackButton.width - 20, goBackButton.height - 20, BLACK);
+        int fontSize = 20;
+        int width = MeasureText("<-", fontSize);
+        DrawText("<-", goBackButton.x + goBackButton.width/2 - width/2, this->goBackButton.y + goBackButton.height/2 - fontSize/2, fontSize, BLACK);
 
     }
 
@@ -482,7 +640,6 @@ public:
 
     static std::string coordinatesToLabels(int x, int y) {
 
-        std::cout << "x: " << x << " y: " << y << std::endl;
 
         std::string text;
         switch (x) {
@@ -519,7 +676,6 @@ public:
 
         text += std::to_string(tmp.at(y));
 
-        std::cout << "location: " << text << std::endl;
 
         return text;
 
@@ -536,6 +692,7 @@ public:
         }
         */
 
+        if (logList.empty()) return;
 
         std::stringstream ss;
 
@@ -611,28 +768,14 @@ public:
         if (logList.empty()) return;
 
 
-        if (logList.size() % 2 != 0) {
-            return;
+        if (wheel > 0 && actualLogs.size() == 10 && actualLogs.front() > 0) {
+            actualLogs.pop_back();
+            actualLogs.push_front(actualLogs.front() - 1);
         }
 
-        // if(SCROLL_NACH_OBEN && LISTE_IST_VOLL && LISTE_IST_NICHT_GANZ_OBEN){
-        if (wheel > 0 && actualLogs.size() == 10 && actualLogs.front() != 0) {
-            actualLogs.pop_back();
-            actualLogs.pop_back();
-
-            actualLogs.push_front(actualLogs.front() - 1);
-            actualLogs.push_front(actualLogs.front() - 1);
-
-        }
-
-        // if(SCROLL_NACH_UNTEN && LISTE_IST_VOLL && LISTE_IST_NICHT_GANZ_UNTEN){
-        if (wheel < 0 && actualLogs.size() == 10 && actualLogs.back() != logList.size() - 1) {
+        if (wheel < 0 && actualLogs.size() == 10 && actualLogs.back() < static_cast<int>(logList.size()) - 1) {
             actualLogs.pop_front();
-            actualLogs.pop_front();
-
             actualLogs.push_back(actualLogs.back() + 1);
-            actualLogs.push_back(actualLogs.back() + 1);
-
         }
 
     }
@@ -641,6 +784,10 @@ public:
     void drawLogList() {
 
         DrawRectangleRec(logRectangle, {153,152,92,150});
+
+        DrawText("Scroll with the mouse", logRectangle.x + logRectangle.width + 20, logRectangle.y + 10, 30, BLACK);
+        DrawText("to see the moves", logRectangle.x + logRectangle.width + 20, logRectangle.y + 40, 30, BLACK);
+
 
         DrawLine(static_cast<int>(logRectangle.x + logRectangle.width/2),
             static_cast<int>(logRectangle.y + 10),
@@ -672,7 +819,6 @@ public:
             int y = std::get<1>(var.second);
             bool hit = std::get<2>(var.second);
 
-            std:: cout << "x: " << x << " y: " << y << std::endl;
 
             std::string location = coordinatesToLabels(x, y);
 
@@ -906,13 +1052,24 @@ public:
 
         int offset = 1;
 
-        drawFiguresLost(lostBlackPieces, blackXoff, 0, fontSize, offset,  this->fieldY);
+        DrawRectangleRec(Rectangle(blackXoff - 5, this->fieldY + fontSize - 10, 300, 20 * fontSize + 20), {168, 35, 25, 200});
 
-        int whiteXoff = this->fieldX + this->fieldlength + 30;
+        std::vector<Players> black(lostBlackPieces.begin(), lostBlackPieces.end());
 
-        DrawText("Verluste von Weiss:", whiteXoff, this->fieldY - fontSize, fontSize, WHITE);
+        drawFiguresLost(black, blackXoff, 0, fontSize, offset,  this->fieldY);
 
-        drawFiguresLost(lostWhitePieces, 0, whiteXoff, fontSize, offset,  this->fieldY);
+
+
+        int whiteXoff = this->fieldX + this->fieldlength + 100;
+
+        DrawText("Verluste von Weiss:", whiteXoff - 10, this->fieldY - fontSize, fontSize, WHITE);
+
+        DrawRectangleRec(Rectangle(whiteXoff - 5, this->fieldY + fontSize - 10, 300, 20 * fontSize + 20), {168, 35, 25, 200});
+
+
+        std::vector<Players> white(lostWhitePieces.begin(), lostWhitePieces.end());
+
+        drawFiguresLost(white, 0, whiteXoff, fontSize, offset,  this->fieldY);
 
 
     }
@@ -1069,7 +1226,7 @@ public:
 
     void restart() {
 
-         int tmp[8][8] = {
+         Board startMap{{
             {9 ,11,10,8 ,7 ,10,11,9},
             {12 ,12 ,12 ,12 ,12 ,12 ,12 ,12},
             {0 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
@@ -1078,9 +1235,9 @@ public:
             {0 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
             {6 ,6 ,6 ,6 ,6 ,6 ,6 ,6},
             {3 ,5 ,4 ,2 ,1 ,4 ,5 ,3},
-        };
+        }};
 
-        memcpy(gMap, tmp, sizeof(tmp));
+        gMap = startMap;
         // Weiss ist am Zug
         turn = true;
 
@@ -1090,7 +1247,11 @@ public:
 
         logList.clear();
         actualLogs.clear();
+        recoveryLogList = std::stack<std::pair<Players, std::tuple<int,int, bool>>>();
+        recoveryLostBlackPieces = std::stack<Players>();
+        recoveryLostWhitePieces = std::stack<Players>();
 
+ 
         check = Check::CHECK_NONE;
         won = Won::NONE;
         gameMode = GameMode::PLAY;
@@ -1104,7 +1265,9 @@ public:
 
         created = false;
 
-        
+        fields.clear();
+        fields.push_back(gMap);
+        fieldsIndex = 0;
 
     }
 
@@ -1122,10 +1285,14 @@ public:
     }
 
 
-    // Spielfeld umdrehen
-    void turnaround() {
-        // Irgendwas einfallen lassen, sodass nur die View um 180Grad gedreht wird, damit alle Berechnungen noch gleich sind
-        // Vllt. mit einer Rotationsmatrix arbeiten
+    void rebuildActualLogs() {
+        actualLogs.clear();
+
+        int start = std::max(0, static_cast<int>(logList.size()) - 10);
+
+        for (int i = start; i < static_cast<int>(logList.size()); ++i) {
+            actualLogs.push_back(i);
+        }
     }
 
     void moveFigure() {
@@ -1143,7 +1310,6 @@ public:
             // Maus hat aufs Spielfeld geklickt
             if (mousePos.x > static_cast<float>(fieldX) && mousePos.x < static_cast<float>(fieldX + fieldlength)
                 && mousePos.y > static_cast<float>(fieldY) && mousePos.y < static_cast<float>(fieldY + fieldlength)) {
-                std::cout << "Mouse clicked on field" << std::endl;
 
                 // Identifizieren des geklickten Blocks
                 float nx = mousePos.x - static_cast<float>(fieldX);
@@ -1157,7 +1323,6 @@ public:
                 x = bx;
                 y = by;
 
-                std::cout << "x: " << x << " y: " << y << std::endl;
 
                 // Wenn das angeklickte Feld schon angeklickt war, wird die Markierung weggemacht
                 if (this->clickedField.first == x && this->clickedField.second == y) {
@@ -1177,11 +1342,22 @@ public:
                             if (!isEmpty(static_cast<Players>(gMap[move.second][move.first]))) {
                                 if (turn) {
                                     std::cout << "---\nBlack lost a figure\n---" << std::endl;
-                                    lostBlackPieces.emplace_back(static_cast<Players>(gMap[move.second][move.first]));
+
+                                    lostBlackPieces.push_back(static_cast<Players>(gMap[move.second][move.first]));
+
+                                    if (lostBlackPieces.size() > 20) {
+                                        lostBlackPieces.pop_front();
+                                    }
+
                                 }
                                 else {
                                     std::cout << "---\nWhite lost a figure\n---" << std::endl;
-                                    lostWhitePieces.emplace_back(static_cast<Players>(gMap[move.second][move.first]));
+                                    lostWhitePieces.push_back(static_cast<Players>(gMap[move.second][move.first]));
+
+                                    if (lostWhitePieces.size() > 20) {
+                                        lostWhitePieces.pop_front();
+                                    }
+
                                 }
                             }
 
@@ -1193,11 +1369,12 @@ public:
                                 gMap[7][7] = static_cast<int>(Players::EMPTY);
                             }
 
-                            // Schwarzer Koenig will kurze Rochade machen
-                            if (gMap[clickedField.second][clickedField.first] == static_cast<int>(Players::B_KING) && move.second == 0 && move.first == 6) {
-                                gMap[0][5] = static_cast<int>(Players::W_ROOK);
+                            // Schwarzer Koenig kurze Rochade
+                            if (gMap[clickedField.second][clickedField.first] == static_cast<int>(Players::B_KING)
+                                && move.second == 0 && move.first == 6) {
+                                gMap[0][5] = static_cast<int>(Players::B_ROOK);
                                 gMap[0][7] = static_cast<int>(Players::EMPTY);
-                            }
+                                }
 
                             // Weisser Koenig will lange Rochade machen
                             if (gMap[clickedField.second][clickedField.first] == static_cast<int>(Players::W_KING) && move.second == 7 && move.first == 2) {
@@ -1205,11 +1382,12 @@ public:
                                 gMap[7][0] = static_cast<int>(Players::EMPTY);
                             }
 
-                            // Schwarzer Koenig will lange Rochade machen
-                            if (gMap[clickedField.second][clickedField.first] == static_cast<int>(Players::W_KING) && move.second == 0 && move.first == 2) {
-                                gMap[0][3] = static_cast<int>(Players::W_ROOK);
+                            // Schwarzer Koenig lange Rochade
+                            if (gMap[clickedField.second][clickedField.first] == static_cast<int>(Players::B_KING)
+                                && move.second == 0 && move.first == 2) {
+                                gMap[0][3] = static_cast<int>(Players::B_ROOK);
                                 gMap[0][0] = static_cast<int>(Players::EMPTY);
-                            }
+                                }
 
 
                             // Endposition wird auf die Spielerindex gesetzt
@@ -1225,22 +1403,9 @@ public:
                             // Spielzug loggen
                             logList.emplace_back(player, std::make_tuple(move.first, move.second, hit));
 
+
                             // Mehr Elemente sind in logList als angezeigt werden koennen
-                            if (logList.size() > 10) {
-
-                                // Erstes element in actualLogs rauswerfen
-
-                                actualLogs.pop_front();
-
-                                // Neues letztes Element einfuegen
-
-                                actualLogs.push_back(logList.size() - 1);
-
-                            }
-                            if (logList.size() <= 10) {
-                                // Index vom neuesten Element speichern
-                                actualLogs.push_back(logList.size()-1);
-                            }
+                            rebuildActualLogs();
 
 
                             // Ursprungsposition wird auf 0 gesetzt (EMPTY)
@@ -1266,6 +1431,21 @@ public:
 
                             // Spielerwechsel
                             turn = !turn;
+
+                            if (fieldsIndex + 1 < fields.size()) {
+                                fields.erase(fields.begin() + fieldsIndex + 1, fields.end());
+                                recoveryLogList = std::stack<std::pair<Players, std::tuple<int,int, bool>>>();
+
+                                recoveryLostBlackPieces = std::stack<Players>();
+                                recoveryLostWhitePieces = std::stack<Players>();
+
+                                rebuildActualLogs();
+                            }
+
+                            // Snapshot vom Feld speichern
+                            fields.push_back(gMap);
+
+                            fieldsIndex++;
 
                         }
                     }
@@ -1900,7 +2080,6 @@ public:
             }
 
             case Players::W_ROOK: {
-                std::cout << "W Rook" << std::endl;
 
                 // While-Schleife um zu ueberpruefen, wie viele Felder frei sind
                 // Richtung nach oben
@@ -2059,7 +2238,6 @@ public:
                 break;
             }
             case Players::B_ROOK: {
-                std::cout << "B Rook" << std::endl;
 
                 // While-Schleife um zu ueberpruefen, wie viele Felder frei sind
                 // Richtung nach oben
@@ -2393,11 +2571,9 @@ public:
 
             case Players::W_PAWN: {
                 // gMap[y][x] ueberpruefen, ob die jeweiligen Felder zum spielen frei sind (0)
-                std::cout << "W Pawn" << std::endl;
                 if (y > 0) {
                     // Wenn Feld frei ist
                     if (isEmpty(static_cast<Players>(gMap[y-1][x]))) {
-                        std::cout << "Feld frei" << std::endl;
                         vec.emplace_back(x, y-1);
                         // y == 6 => Weisser Bauer ist noch auf seiner Startlinie
                         if (y == 6 && isEmpty(static_cast<Players>(gMap[y-2][x]))) {
@@ -2432,10 +2608,8 @@ public:
             }
             case Players::B_PAWN: {
                 // gMap[y][x] ueberpruefen, ob die jeweiligen Felder zum spielen frei sind (0)
-                std::cout << "B Pawn" << std::endl;
                 if (y < 7) {
                     if (isEmpty(static_cast<Players>(gMap[y+1][x]))) {
-                        std::cout << "Feld frei" << std::endl;
                         vec.emplace_back(x, y+1);
                         // y == 6 => Weisser Bauer ist noch auf seiner Startlinie
                         if (y == 1 && isEmpty(static_cast<Players>(gMap[y+2][x]))) {
@@ -2505,11 +2679,6 @@ int main() {
 
     InitWindow(screenW, screenH, "chess");
 
-    Camera2D cam = {0};
-    cam.target = Vector2{ screenW / 2.0f, screenH / 2.0f };
-    cam.offset = Vector2{ screenW / 2.0f, screenH / 2.0f };
-    cam.rotation = 0.0f;
-    cam.zoom = 1.0f;
 
     SetTargetFPS(60);
 
@@ -2520,11 +2689,7 @@ int main() {
 
         ClearBackground(BROWN);
 
-        BeginMode2D(cam);
-
             game.loop();
-
-        EndMode2D();
 
         EndDrawing();
     }
