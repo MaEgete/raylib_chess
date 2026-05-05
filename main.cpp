@@ -109,6 +109,16 @@ private:
 
     using Board = std::array<std::array<int, 8>, 8>;
 
+    struct GameState {
+        Board board;
+        bool whiteKingMoved;
+        bool blackKingMoved;
+        bool whiteRightRookMoved;
+        bool blackRightRookMoved;
+        bool whiteLeftRookMoved;
+        bool blackLeftRookMoved;
+    };
+
     Board gMap{{
         {9 ,11,10,8 ,7 ,10,11,9},
         {12 ,12 ,12 ,12 ,12 ,12 ,12 ,12},
@@ -168,12 +178,12 @@ private:
     std::vector<std::pair<int, int>> blackKingPossibleMoves{};
 
 
-    static bool whiteKingMoved;
-    static bool blackKingMoved;
-    static bool whiteRightRookMoved;
-    static bool blackRightRookMoved;
-    static bool whiteLeftRookMoved;
-    static bool blackLeftRookMoved;
+    bool whiteKingMoved = false;
+    bool blackKingMoved = false;
+    bool whiteRightRookMoved = false;
+    bool blackRightRookMoved = false;
+    bool whiteLeftRookMoved = false;
+    bool blackLeftRookMoved = false;
 
 
     Rectangle logRectangle;
@@ -193,8 +203,7 @@ private:
     static bool created;
 
     size_t fieldsIndex = 0;
-    std::vector<Board> fields;
-
+    std::vector<GameState> fields;
 
 
 public:
@@ -234,7 +243,7 @@ public:
         goForwardButton.x = goBackButton.x + goBackButton.width + 10;
         goForwardButton.y = goBackButton.y;
 
-        fields.push_back(gMap);
+        fields.push_back(currentState());
         fieldsIndex = 0;
 
 
@@ -298,6 +307,8 @@ public:
 
                 std::cout << "Load Log" << std::endl;
 
+                loadLog();
+
                 }
 
             if (mousePos.x >= static_cast<float>(goBackButton.x) && mousePos.x <= static_cast<float>(goBackButton.x + goBackButton.width)
@@ -307,7 +318,7 @@ public:
 
                 if (fieldsIndex != 0 && !logList.empty()) {
                     fieldsIndex--;
-                    gMap = fields[fieldsIndex];
+                    loadState(fields[fieldsIndex]);
 
                     auto element = logList.back();
 
@@ -334,7 +345,6 @@ public:
 
                     rebuildActualLogs();
 
-                    updateKingPosition();
                     turn = !turn;
                     clickedField = {-1, -1};
                     possibleMoves.clear();
@@ -351,7 +361,7 @@ public:
 
                 if (fieldsIndex + 1 < fields.size() && !recoveryLogList.empty()) {
                     fieldsIndex++;
-                    gMap = fields[fieldsIndex];
+                    loadState(fields[fieldsIndex]);
 
                     auto element = recoveryLogList.top();
 
@@ -375,7 +385,6 @@ public:
 
                     rebuildActualLogs();
 
-                    updateKingPosition();
                     turn = !turn;
                     clickedField = {-1, -1};
                     possibleMoves.clear();
@@ -467,6 +476,10 @@ public:
 
         }
         draw();
+    }
+
+    void loadLog() {
+
     }
 
     // Spiel zeichnen
@@ -588,7 +601,6 @@ public:
 
     // Regeln
     void update() {
-        rochade();
         moveFigure();
     }
 
@@ -705,9 +717,16 @@ public:
             int y = std::get<1>(var.second);
             bool hit = std::get<2>(var.second);
 
-            std::string location = coordinatesToLabels(x, y);
-
-            text += std::string(" -> ") + (hit ? "x" : "") + location;
+            if (x == -1 && y == -1) {
+                text += " -> 0-0";
+            }
+            else if (x == -2 && y == -2) {
+                text += " -> 0-0-0";
+            }
+            else {
+                std::string location = coordinatesToLabels(x, y);
+                text += std::string(" -> ") + (hit ? "x" : "") + location;
+            }
 
             ss << text << "\n";
 
@@ -820,9 +839,16 @@ public:
             bool hit = std::get<2>(var.second);
 
 
-            std::string location = coordinatesToLabels(x, y);
-
-            text += std::string(" -> ") + (hit ? "x" : "") + location;
+            if (x == -1 && y == -1) {
+                text += " -> 0-0";
+            }
+            else if (x == -2 && y == -2) {
+                text += " -> 0-0-0";
+            }
+            else {
+                std::string location = coordinatesToLabels(x, y);
+                text += std::string(" -> ") + (hit ? "x" : "") + location;
+            }
 
             int fontSize = 30;
 
@@ -1266,7 +1292,7 @@ public:
         created = false;
 
         fields.clear();
-        fields.push_back(gMap);
+        fields.push_back(currentState());
         fieldsIndex = 0;
 
     }
@@ -1282,6 +1308,31 @@ public:
                 }
             }
         }
+    }
+
+    GameState currentState() const {
+        return GameState{
+            gMap,
+            whiteKingMoved,
+            blackKingMoved,
+            whiteRightRookMoved,
+            blackRightRookMoved,
+            whiteLeftRookMoved,
+            blackLeftRookMoved
+        };
+    }
+
+    void loadState(const GameState& state) {
+        gMap = state.board;
+
+        whiteKingMoved = state.whiteKingMoved;
+        blackKingMoved = state.blackKingMoved;
+        whiteRightRookMoved = state.whiteRightRookMoved;
+        blackRightRookMoved = state.blackRightRookMoved;
+        whiteLeftRookMoved = state.whiteLeftRookMoved;
+        blackLeftRookMoved = state.blackLeftRookMoved;
+
+        updateKingPosition();
     }
 
 
@@ -1396,12 +1447,55 @@ public:
                                 hit = true;
                             }
 
+                            auto movingPiece = static_cast<Players>(gMap[clickedField.second][clickedField.first]);
+
+                            if (movingPiece == Players::W_KING) {
+                                whiteKingMoved = true;
+                            }
+                            else if (movingPiece == Players::B_KING) {
+                                blackKingMoved = true;
+                            }
+                            else if (movingPiece == Players::W_ROOK) {
+                                if (clickedField.first == 0 && clickedField.second == 7) {
+                                    whiteLeftRookMoved = true;
+                                }
+                                else if (clickedField.first == 7 && clickedField.second == 7) {
+                                    whiteRightRookMoved = true;
+                                }
+                            }
+                            else if (movingPiece == Players::B_ROOK) {
+                                if (clickedField.first == 0 && clickedField.second == 0) {
+                                    blackLeftRookMoved = true;
+                                }
+                                else if (clickedField.first == 7 && clickedField.second == 0) {
+                                    blackRightRookMoved = true;
+                                }
+                            }
+
                             gMap[move.second][move.first] = gMap[clickedField.second][clickedField.first];
 
                             auto player = static_cast<Players>(gMap[clickedField.second][clickedField.first]);
 
+                            bool shortCastle =
+                                (player == Players::W_KING || player == Players::B_KING) &&
+                                clickedField.first == 4 &&
+                                move.first == 6;
+
+                            bool longCastle =
+                                (player == Players::W_KING || player == Players::B_KING) &&
+                                clickedField.first == 4 &&
+                                move.first == 2;
+
                             // Spielzug loggen
-                            logList.emplace_back(player, std::make_tuple(move.first, move.second, hit));
+                            if (shortCastle) {
+                                logList.emplace_back(player, std::make_tuple(-1, -1, false)); // 0-0
+                            }
+                            else if (longCastle) {
+                                logList.emplace_back(player, std::make_tuple(-2, -2, false)); // 0-0-0
+                            }
+                            else {
+                                logList.emplace_back(player, std::make_tuple(move.first, move.second, hit));
+                            }
 
 
                             // Mehr Elemente sind in logList als angezeigt werden koennen
@@ -1443,7 +1537,7 @@ public:
                             }
 
                             // Snapshot vom Feld speichern
-                            fields.push_back(gMap);
+                            fields.push_back(currentState());
 
                             fieldsIndex++;
 
@@ -1809,31 +1903,6 @@ public:
         }
     }
 
-    void rochade() const {
-        if (gMap[7][4] == static_cast<int>(Players::EMPTY) || gMap[7][4] != static_cast<int>(Players::W_KING)) {
-            whiteKingMoved = true;
-        }
-
-        if (gMap[7][7] == static_cast<int>(Players::EMPTY) || gMap[7][7] != static_cast<int>(Players::W_ROOK)) {
-            whiteRightRookMoved = true;
-        }
-
-        if (gMap[7][0] == static_cast<int>(Players::EMPTY) || gMap[7][0] != static_cast<int>(Players::W_ROOK)) {
-            whiteLeftRookMoved = true;
-        }
-
-        if (gMap[0][4] == static_cast<int>(Players::EMPTY) || gMap[0][4] != static_cast<int>(Players::B_KING)) {
-            blackKingMoved = true;
-        }
-
-        if (gMap[0][7] == static_cast<int>(Players::EMPTY) || gMap[0][7] != static_cast<int>(Players::B_ROOK)) {
-            blackRightRookMoved = true;
-        }
-
-        if (gMap[0][0] == static_cast<int>(Players::EMPTY) || gMap[0][0] != static_cast<int>(Players::B_ROOK)) {
-            blackLeftRookMoved = true;
-        }
-    }
 
     static void getKingAttackMoves(Players p, int x, int y, std::vector<std::pair<int,int>>& moves) {
         for (int dy = -1; dy <= 1; dy++) {
@@ -2661,13 +2730,6 @@ public:
 
 
 };
-
-bool Game::whiteKingMoved = false;
-bool Game::blackKingMoved = false;
-bool Game::whiteRightRookMoved = false;
-bool Game::blackRightRookMoved = false;
-bool Game::whiteLeftRookMoved = false;
-bool Game::blackLeftRookMoved = false;
 
 bool Game::created = false;
 
