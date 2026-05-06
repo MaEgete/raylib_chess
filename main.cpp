@@ -14,6 +14,7 @@
 #include <format>
 #include <array>
 #include <stack>
+#include "tinyfiledialogs.h"
 
 class Game {
 
@@ -320,6 +321,20 @@ public:
                     fieldsIndex--;
                     loadState(fields[fieldsIndex]);
 
+                    won = Won::NONE;
+                    check = Check::CHECK_NONE;
+                    gameMode = GameMode::PLAY;
+
+                    bool whiteInCheck = isThreatend(whiteKingPosition.first, whiteKingPosition.second, false);
+                    bool blackInCheck = isThreatend(blackKingPosition.first, blackKingPosition.second, true);
+
+                    if (whiteInCheck) {
+                        check = Check::CHECK_BLACK;
+                    }
+                    else if (blackInCheck) {
+                        check = Check::CHECK_WHITE;
+                    }
+
                     auto element = logList.back();
 
                     bool hit = std::get<2>(element.second);
@@ -362,6 +377,20 @@ public:
                 if (fieldsIndex + 1 < fields.size() && !recoveryLogList.empty()) {
                     fieldsIndex++;
                     loadState(fields[fieldsIndex]);
+
+                    won = Won::NONE;
+                    check = Check::CHECK_NONE;
+                    gameMode = GameMode::PLAY;
+
+                    bool whiteInCheck = isThreatend(whiteKingPosition.first, whiteKingPosition.second, false);
+                    bool blackInCheck = isThreatend(blackKingPosition.first, blackKingPosition.second, true);
+
+                    if (whiteInCheck) {
+                        check = Check::CHECK_BLACK;
+                    }
+                    else if (blackInCheck) {
+                        check = Check::CHECK_WHITE;
+                    }
 
                     auto element = recoveryLogList.top();
 
@@ -480,6 +509,257 @@ public:
 
     void loadLog() {
 
+        Board startMap{{
+            {9 ,11,10,8 ,7 ,10,11,9},
+            {12,12,12,12,12,12,12,12},
+            {0 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
+            {0 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
+            {0 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
+            {0 ,0 ,0 ,0 ,0 ,0 ,0 ,0},
+            {6 ,6 ,6 ,6 ,6 ,6 ,6 ,6},
+            {3 ,5 ,4 ,2 ,1 ,4 ,5 ,3},
+        }};
+
+        gMap = startMap;
+        turn = true;
+
+        whiteKingMoved = false;
+        blackKingMoved = false;
+        whiteRightRookMoved = false;
+        blackRightRookMoved = false;
+        whiteLeftRookMoved = false;
+        blackLeftRookMoved = false;
+
+        lostBlackPieces.clear();
+        lostWhitePieces.clear();
+        recoveryLostBlackPieces = {};
+        recoveryLostWhitePieces = {};
+
+        logList.clear();
+        actualLogs.clear();
+        recoveryLogList = {};
+
+        fields.clear();
+        fields.push_back(currentState());
+        fieldsIndex = 0;
+
+        clickedField = {-1, -1};
+        possibleMoves.clear();
+
+        check = Check::CHECK_NONE;
+        won = Won::NONE;
+        gameMode = GameMode::PLAY;
+
+        updateKingPosition();
+
+        const char* filters[] = {"*.txt"};
+
+        const char* filePath = tinyfd_openFileDialog(
+            "Logdatei auswaehlen",
+            "./Logs/",
+            1,
+            filters,
+            "Textdateien",
+            0
+        );
+
+        if (filePath == nullptr) {
+            std::cout << "Keine Datei ausgewaehlt" << std::endl;
+            return;
+        }
+
+        std::filesystem::path data = filePath;
+        std::ifstream logFile(data);
+
+        std::string line;
+
+        while (std::getline(logFile, line)) {
+            std::istringstream iss(line);
+
+            std::string player;
+            std::string ignore;
+            std::string location;
+
+            iss >> player >> ignore >> location;
+
+            Players figure = Players::EMPTY;
+
+            if (player == "W_KING") figure = Players::W_KING;
+            else if (player == "W_QUEEN") figure = Players::W_QUEEN;
+            else if (player == "W_ROOK") figure = Players::W_ROOK;
+            else if (player == "W_BISHOP") figure = Players::W_BISHOP;
+            else if (player == "W_KNIGHT") figure = Players::W_KNIGHT;
+            else if (player == "W_PAWN") figure = Players::W_PAWN;
+            else if (player == "B_KING") figure = Players::B_KING;
+            else if (player == "B_QUEEN") figure = Players::B_QUEEN;
+            else if (player == "B_ROOK") figure = Players::B_ROOK;
+            else if (player == "B_BISHOP") figure = Players::B_BISHOP;
+            else if (player == "B_KNIGHT") figure = Players::B_KNIGHT;
+            else if (player == "B_PAWN") figure = Players::B_PAWN;
+            else {
+                std::cout << "Unknown player: " << player << std::endl;
+                continue;
+            }
+
+            if (location == "0-0" || location == "O-O") {
+                int y = isWhitePiece(figure) ? 7 : 0;
+
+                if (figure == Players::W_KING) {
+                    gMap[7][6] = static_cast<int>(Players::W_KING);
+                    gMap[7][5] = static_cast<int>(Players::W_ROOK);
+                    gMap[7][4] = static_cast<int>(Players::EMPTY);
+                    gMap[7][7] = static_cast<int>(Players::EMPTY);
+
+                    whiteKingMoved = true;
+                    whiteRightRookMoved = true;
+                }
+                else if (figure == Players::B_KING) {
+                    gMap[0][6] = static_cast<int>(Players::B_KING);
+                    gMap[0][5] = static_cast<int>(Players::B_ROOK);
+                    gMap[0][4] = static_cast<int>(Players::EMPTY);
+                    gMap[0][7] = static_cast<int>(Players::EMPTY);
+
+                    blackKingMoved = true;
+                    blackRightRookMoved = true;
+                }
+
+                logList.emplace_back(figure, std::make_tuple(6, y, false));
+                rebuildActualLogs();
+
+                updateKingPosition();
+
+                fields.push_back(currentState());
+                fieldsIndex = fields.size() - 1;
+
+                turn = !turn;
+                continue;
+            }
+
+            if (location == "0-0-0" || location == "O-O-O") {
+                int y = isWhitePiece(figure) ? 7 : 0;
+
+                if (figure == Players::W_KING) {
+                    gMap[7][2] = static_cast<int>(Players::W_KING);
+                    gMap[7][3] = static_cast<int>(Players::W_ROOK);
+                    gMap[7][4] = static_cast<int>(Players::EMPTY);
+                    gMap[7][0] = static_cast<int>(Players::EMPTY);
+
+                    whiteKingMoved = true;
+                    whiteLeftRookMoved = true;
+                }
+                else if (figure == Players::B_KING) {
+                    gMap[0][2] = static_cast<int>(Players::B_KING);
+                    gMap[0][3] = static_cast<int>(Players::B_ROOK);
+                    gMap[0][4] = static_cast<int>(Players::EMPTY);
+                    gMap[0][0] = static_cast<int>(Players::EMPTY);
+
+                    blackKingMoved = true;
+                    blackLeftRookMoved = true;
+                }
+
+                logList.emplace_back(figure, std::make_tuple(2, y, false));
+                rebuildActualLogs();
+
+                updateKingPosition();
+
+                fields.push_back(currentState());
+                fieldsIndex = fields.size() - 1;
+
+                turn = !turn;
+                continue;
+            }
+
+            bool hit = false;
+
+            if (!location.empty() && location[0] == 'x') {
+                hit = true;
+                location.erase(0, 1);
+            }
+
+            if (location.size() < 2) {
+                std::cout << "Invalid location: " << location << std::endl;
+                continue;
+            }
+
+            char cx = location[0];
+            int rank = std::stoi(std::string(1, location[1]));
+
+            int x = -1;
+            int y = 8 - rank;
+
+            switch (cx) {
+                case 'A': x = 0; break;
+                case 'B': x = 1; break;
+                case 'C': x = 2; break;
+                case 'D': x = 3; break;
+                case 'E': x = 4; break;
+                case 'F': x = 5; break;
+                case 'G': x = 6; break;
+                case 'H': x = 7; break;
+                default:
+                    std::cout << "Invalid file: " << cx << std::endl;
+                    continue;
+            }
+
+            std::pair<int, int> target = {x, y};
+
+            std::vector<std::pair<int, int>> moves;
+            bool moveLoaded = false;
+
+            for (int iy = 0; iy < static_cast<int>(gMap.size()) && !moveLoaded; iy++) {
+                for (int jx = 0; jx < static_cast<int>(gMap[iy].size()) && !moveLoaded; jx++) {
+                    if (gMap[iy][jx] == static_cast<int>(figure)) {
+                        moves.clear();
+                        getPossibleMoves(figure, jx, iy, moves);
+
+                        auto it = std::ranges::find(moves, target);
+
+                        if (it != moves.end()) {
+                            Players captured = static_cast<Players>(gMap[target.second][target.first]);
+                            bool realHit = !isEmpty(captured);
+
+                            if (realHit) {
+                                if (isWhitePiece(figure)) {
+                                    lostBlackPieces.push_back(captured);
+                                }
+                                else if (isBlackPiece(figure)) {
+                                    lostWhitePieces.push_back(captured);
+                                }
+                            }
+
+                            if (figure == Players::W_KING) whiteKingMoved = true;
+                            else if (figure == Players::B_KING) blackKingMoved = true;
+                            else if (figure == Players::W_ROOK) {
+                                if (jx == 0 && iy == 7) whiteLeftRookMoved = true;
+                                else if (jx == 7 && iy == 7) whiteRightRookMoved = true;
+                            }
+                            else if (figure == Players::B_ROOK) {
+                                if (jx == 0 && iy == 0) blackLeftRookMoved = true;
+                                else if (jx == 7 && iy == 0) blackRightRookMoved = true;
+                            }
+
+                            gMap[target.second][target.first] = gMap[iy][jx];
+                            gMap[iy][jx] = static_cast<int>(Players::EMPTY);
+
+                            logList.emplace_back(figure, std::make_tuple(target.first, target.second, realHit));
+                            rebuildActualLogs();
+
+                            updateKingPosition();
+
+                            fields.push_back(currentState());
+                            fieldsIndex = fields.size() - 1;
+
+                            turn = !turn;
+                            moveLoaded = true;
+                        }
+                    }
+                }
+            }
+
+            if (!moveLoaded) {
+                std::cout << "Could not load move: " << line << std::endl;
+            }
+        }
     }
 
     // Spiel zeichnen
@@ -2739,8 +3019,10 @@ int main() {
     constexpr int screenW = 1400;
     constexpr int screenH = 1200;
 
-    InitWindow(screenW, screenH, "chess");
-
+    InitWindow(screenW, screenH, "Chess");
+    Image icon = LoadImage("../images/chess_icon.png");
+    SetWindowIcon(icon);
+    UnloadImage(icon);
 
     SetTargetFPS(60);
 
