@@ -11,7 +11,6 @@
 #include <fstream>
 #include <filesystem>
 #include <chrono>
-#include <format>
 #include <array>
 #include <stack>
 #include "tinyfiledialogs.h"
