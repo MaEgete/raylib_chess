@@ -27,10 +27,11 @@
 
         field = Rectangle{static_cast<float>(fieldX), static_cast<float>(fieldY), static_cast<float>(fieldlength), static_cast<float>(fieldlength)};
 
-        restartX = this->fieldX + fieldlength/4;
-        restartY = this->fieldY + fieldlength + 80;
         restartW = fieldlength/2;
-        restartH = 150;
+        restartH = fieldlength / 4;
+        restartX = this->fieldX + fieldlength/4;
+        restartY = GetScreenHeight() - restartH - 10;
+
 
         saveLogButton.width = fieldlength/2;
         saveLogButton.height = 150;
@@ -43,10 +44,10 @@
         loadLogButton.y = saveLogButton.y;
 
 
-        goBackButton.width = 50;
-        goBackButton.height = 50;
-        goBackButton.x = 10;
-        goBackButton.y = 100;
+        goBackButton.width = blocksize;
+        goBackButton.height = blocksize;
+        goBackButton.x = blocksize / 5;
+        goBackButton.y = blocksize * 2;
 
         goForwardButton.width = goBackButton.width;
         goForwardButton.height = goBackButton.height;
@@ -71,7 +72,7 @@
 
         updateKingPosition();
 
-        logRectangle = Rectangle{static_cast<float>(this->fieldX), 10, static_cast<float>(this->fieldlength), 5 * 30 + 20};
+        logRectangle = Rectangle(static_cast<float>(this->fieldX), 10, static_cast<float>(this->fieldlength), 5 * fieldlength / 20 + 20);
 
     }
 
@@ -630,7 +631,7 @@
 
         DrawRectangleRec(loadLogButton, WHITE);
         DrawRectangleLines(loadLogButton.x + 10, loadLogButton.y + 10, loadLogButton.width - 20, loadLogButton.height - 20, BLACK);
-        int fontSize = 50;
+        int fontSize = fieldlength / 12;
         int width = MeasureText("Load Log", fontSize);
         DrawText("Load Log", loadLogButton.x + loadLogButton.width/2 - width/2, this->loadLogButton.y + loadLogButton.height/2 - fontSize/2, fontSize, BLACK);
 
@@ -640,7 +641,7 @@
 
         DrawRectangleRec(goForwardButton, WHITE);
         DrawRectangleLines(goForwardButton.x + 10, goForwardButton.y + 10, goForwardButton.width - 20, goForwardButton.height - 20, BLACK);
-        int fontSize = 20;
+        int fontSize = fieldlength / 30;
         int width = MeasureText("->", fontSize);
         DrawText("->", goForwardButton.x + goForwardButton.width/2 - width/2, this->goForwardButton.y + goForwardButton.height/2 - fontSize/2, fontSize, BLACK);
 
@@ -650,7 +651,7 @@
 
         DrawRectangleRec(goBackButton, WHITE);
         DrawRectangleLines(goBackButton.x + 10, goBackButton.y + 10, goBackButton.width - 20, goBackButton.height - 20, BLACK);
-        int fontSize = 20;
+        int fontSize = fieldlength / 30;
         int width = MeasureText("<-", fontSize);
         DrawText("<-", goBackButton.x + goBackButton.width/2 - width/2, this->goBackButton.y + goBackButton.height/2 - fontSize/2, fontSize, BLACK);
 
@@ -659,7 +660,7 @@
     void Game::drawSaveLogButton() {
         DrawRectangleRec(saveLogButton, WHITE);
         DrawRectangleLines(saveLogButton.x + 10, saveLogButton.y + 10, saveLogButton.width - 20, saveLogButton.height - 20, BLACK);
-        int fontSize = 50;
+        int fontSize = fieldlength / 12;
         int width = MeasureText("Save Log", fontSize);
         DrawText("Save Log", saveLogButton.x + saveLogButton.width/2 - width/2, this->saveLogButton.y + saveLogButton.height/2 - fontSize/2, fontSize, BLACK);
     }
@@ -668,7 +669,7 @@
     void Game::drawRestartButton() {
         DrawRectangle(restartX, restartY, restartW, restartH, WHITE);
         DrawRectangleLines(restartX+10, restartY + 10, restartW - 20, restartH - 20, BLACK);
-        int fontSize = 50;
+        int fontSize = fieldlength / 12;
         int width = MeasureText("Restart!", fontSize);
         DrawText("Restart!", this->midX - width/2, this->restartY + restartH/2 - fontSize/2, fontSize, BLACK);
     }
@@ -893,8 +894,8 @@
 
         DrawRectangleRec(logRectangle, {153,152,92,150});
 
-        DrawText("Scroll with the mouse", logRectangle.x + logRectangle.width + 20, logRectangle.y + 10, 30, BLACK);
-        DrawText("to see the moves", logRectangle.x + logRectangle.width + 20, logRectangle.y + 40, 30, BLACK);
+        DrawText("Scroll with the mouse", logRectangle.x + logRectangle.width + 20, logRectangle.y + 10, fieldlength / 25, BLACK);
+        DrawText("to see the moves", logRectangle.x + logRectangle.width + 20, logRectangle.y + 40, fieldlength / 25, BLACK);
 
 
         DrawLine(static_cast<int>(logRectangle.x + logRectangle.width/2),
@@ -939,7 +940,7 @@
                 text += std::string(" -> ") + (hit ? "x" : "") + location;
             }
 
-            int fontSize = 30;
+            int fontSize = fieldlength / 20;
 
             // Weiss auf der linken Spalte
             if (isWhitePiece(player)) {
@@ -948,7 +949,7 @@
             }
             // Schwarz auf der rechten Spalte
             else if (isBlackPiece(player)) {
-                DrawText(text.c_str(), static_cast<int>(logRectangle.x + logRectangle.width / 2 + 10), static_cast<int>(logRectangle.y + 10 + static_cast<float>(fontSize) * static_cast<float>(bCount)), 30, BLACK);
+                DrawText(text.c_str(), static_cast<int>(logRectangle.x + logRectangle.width / 2 + 10), static_cast<int>(logRectangle.y + 10 + static_cast<float>(fontSize) * static_cast<float>(bCount)), fontSize, BLACK);
                 bCount++;
             }
 
@@ -1154,20 +1155,20 @@
         }
     }
 
-    //Wenn nur noch ein Spieler auf dem Feld ist und dieser keinen PossibleMove hat, dann Schachmatt!
+    // Wenn nur noch ein Spieler auf dem Feld ist und dieser keinen PossibleMove hat, dann Schachmatt!
 
     void Game::drawLostFigures() {
 
 
         // Schwarze Figuren
-        int fontSize = 30;
+        int fontSize = fieldlength / 20;
         DrawText("Verluste von Schwarz:", 10, this->fieldY - fontSize, fontSize, BLACK);
 
         int blackXoff = 10;
 
         int offset = 1;
 
-        DrawRectangleRec(Rectangle(blackXoff - 5, this->fieldY + fontSize - 10, 300, 20 * fontSize + 20), {168, 35, 25, 200});
+        DrawRectangleRec(Rectangle(blackXoff - 5, this->fieldY + fontSize - 10, fieldlength / 2 - 50, 20 * fontSize + 20), {168, 35, 25, 200});
 
         std::vector<Players> black(lostBlackPieces.begin(), lostBlackPieces.end());
 
@@ -1175,16 +1176,18 @@
 
 
 
-        int whiteXoff = this->fieldX + this->fieldlength + 100;
+        int whiteXoff = GetScreenWidth() - (fieldlength / 2 - 50) - 5;
 
-        DrawText("Verluste von Weiss:", whiteXoff - 10, this->fieldY - fontSize, fontSize, WHITE);
+        int textWidth = MeasureText("Verluste von Weiss:", fontSize);
 
-        DrawRectangleRec(Rectangle(whiteXoff - 5, this->fieldY + fontSize - 10, 300, 20 * fontSize + 20), {168, 35, 25, 200});
+        DrawText("Verluste von Weiss:", GetScreenWidth() - textWidth - 10, this->fieldY - fontSize, fontSize, WHITE);
+
+        DrawRectangleRec(Rectangle(whiteXoff, this->fieldY + fontSize - 10, fieldlength / 2 - 50, 20 * fontSize + 20), {168, 35, 25, 200});
 
 
         std::vector<Players> white(lostWhitePieces.begin(), lostWhitePieces.end());
 
-        drawFiguresLost(white, 0, whiteXoff, fontSize, offset,  this->fieldY);
+        drawFiguresLost(white, 0, whiteXoff + 10, fontSize, offset,  this->fieldY);
 
 
     }
@@ -1192,7 +1195,7 @@
 
 
     void Game::drawText() const {
-        DrawText(TextFormat("%s to move", (this->turn ? "White" : "Black"), 20), 10, 10, 40, (this->turn ? WHITE : BLACK));
+        DrawText(TextFormat("%s to move", (this->turn ? "White" : "Black"), 20), 10, 10, fieldlength / 15, (this->turn ? WHITE : BLACK));
     }
 
     // Spielfeld zeichnen
@@ -1265,7 +1268,7 @@
 
     void Game::drawFigures() {
 
-        float scale = 2.5f;
+        float scale = static_cast<float>(fieldlength) / 240;
 
         auto drawFiguresHelpMethod = [&](PieceSprite pieceSprite, int nx, int ny) {
             Rectangle src = pieceSprites[static_cast<int>(pieceSprite)];

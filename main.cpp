@@ -12,7 +12,7 @@ int main() {
 
     SetTargetFPS(60);
 
-    Game game;
+    Game game(screenH / 2);
 
     while (!WindowShouldClose()) {
         BeginDrawing();
