@@ -1,6 +1,5 @@
 #include "Game.h"
 
-
 #include <iostream>
 #include "raylib.h"
 #include <vector>
@@ -17,7 +16,6 @@
 #include <array>
 #include <stack>
 #include "tinyfiledialogs.h"
-
 
 
     Game::Game(int fieldlength) : fieldlength{fieldlength}, blocksize{fieldlength / 8} {
@@ -2820,6 +2818,4 @@
     }
 
 
-
 bool Game::created = false;
-
