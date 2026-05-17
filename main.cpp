@@ -2,8 +2,9 @@
 
 int main() {
 
-    constexpr int screenW = 1400;
-    constexpr int screenH = 1200;
+
+    constexpr int screenH = 800;
+    constexpr int screenW = screenH + screenH / 6;
 
     InitWindow(screenW, screenH, "Chess");
     Image icon = LoadImage("../images/chess_icon.png");
