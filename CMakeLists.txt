@@ -7,7 +7,9 @@ find_package(raylib REQUIRED)
 
 add_executable(raylib_chess
         main.cpp
-        include/tinyfiledialogs.c)
+        include/tinyfiledialogs.c
+        Game.cpp
+        Game.h)
 
 target_include_directories(raylib_chess PRIVATE include)
 
